@@ -1,7 +1,8 @@
 <?php
 require_once '../vendor/autoload.php';
-require_once '../include/Register_Handler.php';
+require_once '../include/users/Register_Handler_U.php';
 require_once '../include/SmsIR_SendMessage.php';
+require '../include/admin/Register_Handler_A.php';
 error_reporting(E_ALL);
 ini_set('display_errors',1);
 $apikey=null;
@@ -12,6 +13,7 @@ define('SITEURL',"https://api.kavenegar.com");
 
 
 function authenticate(\Slim\Route $route) {
+
     $header = apache_request_headers();
     $response  = array();
     $app = \Slim\Slim::getInstance();
@@ -38,6 +40,7 @@ function authenticate(\Slim\Route $route) {
 }
 
 require_once '../routes/user/registarion.php';
+require_once '../routes/admin/registeration.php';
 
 function sendSms($mobile ,$otp) {
     $message = "به نور الصالحین خوش آمدید رمز عبور شما :" . $otp ;
