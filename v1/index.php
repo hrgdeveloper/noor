@@ -1,12 +1,14 @@
 <?php
 require_once '../vendor/autoload.php';
-require_once '../include/users/Register_Handler_U.php';
+require_once '../include/users/User_Handler.php';
 require_once '../include/SmsIR_SendMessage.php';
-require '../include/admin/Register_Handler_A.php';
+require '../include/admin/Admin_Hanlder.php';
+require '../include/DbHanlder.php';
 error_reporting(E_ALL);
 ini_set('display_errors',1);
 $apikey=null;
 $user_id = null ;
+$admin_id = null ;
 $app = new \Slim\Slim();
 define('SITEURL',"https://api.kavenegar.com");
 
@@ -38,9 +40,38 @@ function authenticate(\Slim\Route $route) {
         $app->stop();
     }
 }
+function authenticateAdmin(\Slim\Route $route) {
 
-require_once '../routes/user/registarion.php';
-require_once '../routes/admin/registeration.php';
+    $header = apache_request_headers();
+    $response  = array();
+    $app = \Slim\Slim::getInstance();
+    if (isset($header['AuthorizationMyAd'])) {
+        $db = new DbHanlder();
+        global $apikey;
+        $apikey = $header['AuthorizationMyAd'] ;
+        if (!$db->isValidApikeyAdmin($apikey)) {
+            $response['error'] = true ;
+            $response['message'] = "Apikey is not valid ! ";
+            echoResponse(401,$response);
+            $app->stop();
+        }else {
+            global $admin_id ;
+            $admin_id = $db->getAdminByapiKey($apikey);
+        }
+
+    }else {
+        $response['error'] = true ;
+        $response['message'] = "Apikey is Missing! ";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+}
+
+
+require '../routes/user/registarion.php';
+require '../routes/admin/registeration.php';
+require '../routes/admin/adminOprations.php';
+
 
 function sendSms($mobile ,$otp) {
     $message = "به نور الصالحین خوش آمدید رمز عبور شما :" . $otp ;

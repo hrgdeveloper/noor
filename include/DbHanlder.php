@@ -28,6 +28,16 @@ class DbHanlder {
 
     }
 
+    public function isValidApikeyAdmin($apikey) {
+        $stmt = $this->conn->prepare("select admin_id from admin_login where apikey like ? ");
+
+        $stmt->bind_param("s" , $apikey);
+        $stmt->execute();
+        $result =   $stmt->get_result();
+        return $result->num_rows > 0 ;
+
+    }
+
 
     public function getUserIdByApikey($apikey) {
         $stmt =$this->conn->prepare("select user_id from users where apikey like ? ");
@@ -46,6 +56,25 @@ class DbHanlder {
         }
     }
 
+
+
+
+    public function getAdminByapiKey($apikey) {
+        $stmt =$this->conn->prepare("select admin_id from admin_login where apikey like ? ");
+
+        $stmt->bind_param("s",$apikey);
+
+        if ($stmt->execute())  {
+            $stmt->bind_result($user_id);
+            $stmt->store_result();
+            $stmt->fetch();
+            $stmt->close();
+            return $user_id;
+
+        }else {
+            return null ;
+        }
+    }
 
 
 }

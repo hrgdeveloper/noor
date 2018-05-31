@@ -7,7 +7,7 @@ $app->post("/createAdmin" , function() use ($app) {
     $username= $app->request->post('username');
     $password = $app->request->post('password');
 
-    $db = new Register_Handler_A();
+    $db = new Admin_Hanlder();
     $res = $db->createAdmin( $username, $password );
     if($res==0){
         $response["error"] = true;
@@ -33,7 +33,7 @@ $app->post("/LogAdmin_noor" , function() use ($app) {
     $password = $app->request()->post('password');
     $response = array();
 
-    $db = new Register_Handler_A();
+    $db = new Admin_Hanlder();
     // check for correct email and password
     $status = $db->checkLogin($userName,$password);
     if ($status==1) {
@@ -55,3 +55,4 @@ $app->post("/LogAdmin_noor" , function() use ($app) {
     echoResponse(200, $response);
 
 });
+

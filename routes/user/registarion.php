@@ -12,7 +12,7 @@ $app->post("/register" , function () use ($app) {
         $response['message'] = "فرمت شماره وارد شده صحیح نمیباشد" ;
     }else {
         $otp = rand(100000,999999);
-        $db = new Register_Handler_U();
+        $db = new User_Handler();
         $result = $db->createUser($mobile,$otp);
 
 
@@ -42,7 +42,7 @@ $app->post('/verify' , function () use ($app) {
     verifyRequiredParams(array('mobile' , 'otp'));
     $mobile = $app->request->post('mobile');
     $otp = $app->request->post('otp');
-    $db = new Register_Handler_U();
+    $db = new User_Handler();
     $user= $db->activeUser($mobile,$otp);
     if ($user==null) {
         $response['error'] = true;

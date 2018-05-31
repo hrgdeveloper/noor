@@ -1,5 +1,5 @@
 <?php
-class Register_Handler_A {
+class Admin_Hanlder {
     private $conn;
     function __construct()
     {
@@ -7,6 +7,8 @@ class Register_Handler_A {
         $coonect = new DbConnect();
         $this->conn = $coonect->connect();
     }
+    // ************************************************************ registeration ********************************************\\
+
     public function createAdmin($username, $password ) {
 
             // Generating password hash
@@ -81,5 +83,22 @@ class Register_Handler_A {
     private function generateApiKey() {
         return md5(uniqid(rand(), true));
     }
+
+    // ************************************************************ adminOprations ********************************************\\
+
+    public function getAllUsers() {
+        $stmt = $this->conn->prepare("SELECT user_id,mobile,username,status,active,created_at FROM users");
+        $stmt->execute();
+        $result = $stmt->get_result();
+       if ($result->num_rows>0) {
+           return $result;
+       }else {
+           return null ;
+       }
+
+
+}
+
+
 
 }

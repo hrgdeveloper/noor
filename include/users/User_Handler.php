@@ -1,5 +1,5 @@
 <?php
-class Register_Handler_U
+class User_Handler
 {
     private $conn;
 
