@@ -167,6 +167,7 @@ function CallAPI($method, $api, $data, $headers) {
 //    die;
 }
 
+
 function verifyRequiredParams($required_fields) {
     $error = false;
     $error_fields = "";
@@ -195,6 +196,7 @@ function verifyRequiredParams($required_fields) {
         $app->stop();
     }
 }
+
 
 
 function echoResponse($status , $response ) {
