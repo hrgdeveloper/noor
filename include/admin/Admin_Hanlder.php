@@ -1,6 +1,8 @@
 <?php
+
 class Admin_Hanlder
 {
+
     private $conn;
 
     function __construct()
@@ -98,7 +100,9 @@ class Admin_Hanlder
 
     public function getAllUsers()
     {
-        $stmt = $this->conn->prepare("SELECT user_id,mobile,username,status,active,created_at FROM users");
+        $stmt = $this->conn->prepare("SELECT user_id,mobile,username,status,active,created_at FROM users order by 
+user_id DESC 
+");
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result->num_rows > 0) {
@@ -127,96 +131,314 @@ class Admin_Hanlder
 
     public function makeChanel($details)
     {
-        $thumb_path = '../uploads/chanel_thumb/';
-        $prifle_pic = '../uploads/chanel_pics/';
-        $pic_info = pathinfo($_FILES['pic']['name']);
-        $pic_name_to_store = $details['name'] . '_' . $pic_info['basename'];
-        $pic_path = $prifle_pic . $pic_name_to_store;
+        if ($this->chanelExists($details['name'])) {
 
-        $filetype =$_FILES['pic']['type'];
+            $oject = (object) [
+                "return" => 3 ,
+                "chanel" => null
+            ];
+            return $oject;
 
+        }else {
+            $thumb_path = '../uploads/chanel_thumb/';
+            $prifle_pic = '../uploads/chanel_pics/';
+            $pic_info = pathinfo($_FILES['pic']['name']);
+            $extension = $pic_info['extension'];
 
-        $extension = $pic_info['extension'];
+            $pic_name_to_store = rand(1111,9999) . '_' . $pic_info['basename'];
+            $pic_path = $prifle_pic . $pic_name_to_store;
 
-        $thumb_path_to_store = $thumb_path . $pic_name_to_store ;
-
-        list($filewidth,$fileheight) = getimagesize($_FILES['pic']['tmp_name']);
-
-
-        if($filetype == "image/jpeg")
-        {
-            $imagecreate = "imagecreatefromjpeg";
-            $imageformat = "imagejpeg";
-        }
-        if($filetype == "image/png")
-        {
-            $imagecreate = "imagecreatefrompng";
-            $imageformat = "imagepng";
-        }
-        if($filetype == "image/gif")
-        {
-            $imagecreate= "imagecreatefromgif";
-            $imageformat = "imagegif";
-        }
-        $new_width = "250";
-        $new_height = "250";
-        $image_new = imagecreatetruecolor($new_width, $new_height);
-
-        $uploadedfile = $_FILES['pic']['tmp_name'];
-        $image = $imagecreate($uploadedfile);
-        // vase inke age png bood back groundesh siah nashe
-        if($extension == "gif" or $extension == "png"){
-            imagecolortransparent($image_new, imagecolorallocatealpha($image_new, 0, 0, 0, 127));
-            imagealphablending($image_new, false);
-            imagesavealpha($image_new, true);
-        }
-
-        imagecopyresampled($image_new, $image, 0, 0, 0, 0, $new_width, $new_height, $filewidth, $fileheight);
-        $imageformat($image_new, $thumb_path_to_store);
+            $filetype =$_FILES['pic']['type'];
 
 
-        if (!move_uploaded_file($_FILES['pic']['tmp_name'], $pic_path)) {
 
-          return 0 ;
-        }
-        else {
 
-            $this->conn->begin_transaction();
-            $commit = true ;
-            try {
-                $stmt = $this->conn->prepare("INSERT INTO chanels(name,description,thumb) values(?,?,?)");
-                $stmt->bind_param("sss", $details['name'], $details['description'], $pic_name_to_store);
-                $stmt->execute();
-                $stmt->close();
+            $thumb_path_to_store = $thumb_path . $pic_name_to_store ;
 
-                // Check for successful insertion
+            list($filewidth,$fileheight) = getimagesize($_FILES['pic']['tmp_name']);
+
+
+            if($filetype == "image/jpeg")
+            {
+                $imagecreate = "imagecreatefromjpeg";
+                $imageformat = "imagejpeg";
+            }
+            if($filetype == "image/png")
+            {
+                $imagecreate = "imagecreatefrompng";
+                $imageformat = "imagepng";
+            }
+            if($filetype == "image/gif")
+            {
+                $imagecreate= "imagecreatefromgif";
+                $imageformat = "imagegif";
+            }
+            $new_width = "250";
+            $new_height = "250";
+            $image_new = imagecreatetruecolor($new_width, $new_height);
+
+            $uploadedfile = $_FILES['pic']['tmp_name'];
+            $image = $imagecreate($uploadedfile);
+            // vase inke age png bood back groundesh siah nashe
+            if($extension == "gif" or $extension == "png"){
+                imagecolortransparent($image_new, imagecolorallocatealpha($image_new, 0, 0, 0, 127));
+                imagealphablending($image_new, false);
+                imagesavealpha($image_new, true);
+            }
+
+            imagecopyresampled($image_new, $image, 0, 0, 0, 0, $new_width, $new_height, $filewidth, $fileheight);
+            $imageformat($image_new, $thumb_path_to_store);
+
+
+            if (!move_uploaded_file($_FILES['pic']['tmp_name'], $pic_path)) {
+               $oject = (object) [
+                   "return" => 0 ,
+                    "chanel" => null
+               ];
+                return $oject ;
+            }
+            else {
+                $last_insert =null;
+                $this->conn->begin_transaction();
+                $commit = true ;
+                try {
+                    $stmt = $this->conn->prepare("INSERT INTO chanels(name,description,thumb,admin_id) values(?,?,?,?)");
+                    $stmt->bind_param("sssi", $details['name'], $details['description'], $pic_name_to_store , $details['admin_id']);
+                    $stmt->execute();
+                    $stmt->close();
+                    $last_insert  = $this->conn->insert_id;
+                    // Check for successful insertion
 
                     $last_id = $this->conn->insert_id;
-                    $st= $this->conn->prepare("INSERT INTO chanel_photos(chanel_id,photo) values(?,?)");
+                    $st= $this->conn->prepare("INSERT INTO chanels_photos(chanel_id,photo) values(?,?)");
+
                     $st->bind_param("is",$last_id,$pic_name_to_store);
                     $st->execute();
                     $st->close();
                     $this->conn->commit();
 
-            }catch (DOException $e) {
-                $this->conn->rollback();
-                $commit=false;
-            }
+                }catch (DOException $e) {
+                    $this->conn->rollback();
+                    $commit=false;
+                }
 
-            if ($commit) {
-                return 1 ;
-            }else {
-                return 2 ;
-            }
+                if ($commit) {
 
 
 
+
+                    $stmt_last = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username, ms1.message as last_message,ms1.type , ms1.updated_at
+                          FROM chanels AS c join admin_login a on c.admin_id = a.admin_id
+                          left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message
+                          WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) where c.chanel_id like ? ");
+                    $stmt_last->bind_param("i",$last_insert);
+                    $stmt_last->execute();
+                    $chanel = $stmt_last->get_result();
+
+                    $oject = (object) [
+
+                        "return" => 1 ,
+                        "chanel" => $chanel
+                    ];
+                   return $oject;
+
+                }else {
+                    $oject = (object) [
+                        "return" => 2 ,
+                        "chanel" => null
+                    ];
+                    return $oject ;
                 }
 
 
 
+            }
+        }
 
 
 
     }
+    private  function chanelExists($name) {
+        $stmt = $this->conn->prepare("select chanel_id from chanels where name like ?");
+        $stmt->bind_param("s",$name);
+          $stmt->execute();
+
+          $result = $stmt->get_result();
+
+       return $result->num_rows > 0 ;
+
+    }
+
+   public function getAllChenls() {
+        $response = array();
+        $response['chanels'] = array();
+        // in query baes mishe ke akharin payam vared shode vase har canalam begirim
+       $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username,ms1.updated_at, ms1.message as last_message,ms1.type
+FROM chanels AS c join admin_login a on c.admin_id = a.admin_id
+left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) ");
+
+       $stmt->execute();
+
+       $result = $stmt->get_result();
+       if ($result->num_rows>0) {
+           $response['error'] = false;
+          while ($single_chanel = $result->fetch_assoc()) {
+
+              array_push($response['chanels'] ,$single_chanel);
+          }
+
+       }else {
+           $response['error'] = true;
+           $response['message'] = "هیچ کانالی ثبت نشده است" ;
+       }
+       return $response;
+
+   }
+
+
+//============================================================================NewMessageOprations=======================================\\
+
+public function makePlainMessage($content , $chanel_id) {
+
+    $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message , type ) values (?,?,?,?)");
+    $stmt->bind_param("iisi" , $content['admin_id'] ,$chanel_id,$content['message'], $content['type']);
+    $stmt->execute();
+    if ($this->conn->affected_rows >0 ) {
+        $last_id = $this->conn->insert_id;
+        $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , url , updated_at ,a.username as admin_name  from message m 
+                 join admin_login a on m.admin_id = a.admin_id  where message_id like ?");
+
+        $stmt->bind_param("i",$last_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result;
+
+
+    }else {
+        return null ;
+
+    }
+
+}
+public function makePicMessage($content , $chanel_id) {
+    $new_width = "200";
+    $new_height = "200";
+    $quality = 9 ;
+
+    $message_pic_path = '../uploads/message/pic/';
+    $message_thumb_path = '../uploads/message/pic_thumb/';
+    $pic_info = pathinfo($_FILES['file']['name']);
+    $extension = $pic_info['extension'];
+
+    $pic_name_to_store = rand(1111,9999) . '_' . substr(abs( crc32( uniqid() ) ),0,6) . '.'. $extension  ;
+    $pic_path = $message_pic_path . $pic_name_to_store;
+    $thumb_path = $message_thumb_path . $pic_name_to_store;
+
+    $filetype =$_FILES['file']['type'];
+
+
+    list($width_orig,$height_orig) = getimagesize($_FILES['file']['tmp_name']);
+    $ratio_orig = $width_orig/$height_orig;
+    if ($new_width/$new_height > $ratio_orig) {
+        $new_width = $new_height*$ratio_orig;
+    } else {
+        $new_height = $new_width/$ratio_orig;
+    }
+
+
+
+    if($filetype == "image/jpeg")
+    {
+        $imagecreate = "imagecreatefromjpeg";
+        $imageformat = "imagejpeg";
+    }
+    if($filetype == "image/png")
+    {
+        $imagecreate = "imagecreatefrompng";
+        $imageformat = "imagepng";
+    }
+    if($filetype == "image/gif")
+    {
+        $imagecreate= "imagecreatefromgif";
+        $imageformat = "imagegif";
+    }
+
+    $image_new = imagecreatetruecolor($new_width, $new_height);
+
+    $uploadedfile = $_FILES['file']['tmp_name'];
+
+    $image = $imagecreate($uploadedfile);
+    // vase inke age png bood back groundesh siah nashe
+    if($extension == "gif" or $extension == "png"){
+        imagecolortransparent($image_new, imagecolorallocatealpha($image_new, 0, 0, 0, 127));
+        imagealphablending($image_new, false);
+        imagesavealpha($image_new, true);
+    }
+
+    imagecopyresampled($image_new, $image, 0, 0, 0, 0, $new_width, $new_height, $width_orig, $height_orig);
+    $imageformat($image_new, $thumb_path,$quality);
+
+
+    $temp = file_get_contents($thumb_path);
+      imagedestroy($image_new);
+
+//
+//    $image_base_64 =  base64_encode($temp);
+//    $final_thumb  = $image = 'data:image/'.$extension.';base64,'.$image_base_64;
+
+    $lenth = round(filesize($uploadedfile) / 1024) ;
+
+    if (move_uploaded_file($uploadedfile , $pic_path)) {
+        $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type , pic_thumb    , lenth  , url  ) values (?,?,?,? , ? , ? ,?)");
+
+
+
+        $stmt->bind_param("iisisss" , $content['admin_id'] ,$chanel_id,$content['message'], $content['type'] , $pic_name_to_store,$lenth,$pic_name_to_store);
+        $stmt->execute();
+
+
+
+        if ($this->conn->affected_rows >0 ) {
+            $last_id = $this->conn->insert_id;
+            $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , url , updated_at ,a.username as admin_name  from message m 
+                 join admin_login a on m.admin_id = a.admin_id  where message_id like ?") ;
+
+            $stmt->bind_param("i",$last_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+
+            $object=(object) [
+                "error" => 0 ,
+                "content" => $result
+        ];
+           return $object;
+
+        }
+        else {
+            $object=(object) [
+                "error" => 2
+        ];
+
+            return $object;
+
+
+        }
+
+    }else {
+
+        $object=(object) [
+            "error" => 1
+        ];
+        return $object;
+
+    }
+
+
+}
+
+
+
+
+
 }

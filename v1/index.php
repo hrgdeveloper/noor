@@ -6,6 +6,7 @@ require '../include/admin/Admin_Hanlder.php';
 require '../include/DbHanlder.php';
 error_reporting(E_ALL);
 ini_set('display_errors',1);
+ini_set ('gd.jpeg_ignore_warning', 1);
 $apikey=null;
 $user_id = null ;
 $admin_id = null ;
@@ -68,15 +69,16 @@ function authenticateAdmin(\Slim\Route $route) {
 }
 
 
-require '../routes/user/registarion.php';
-require '../routes/admin/registeration.php';
-require '../routes/admin/adminOprations.php';
+require '../routes/user/Registarion.php';
+require '../routes/user/UserOprations.php';
+require '../routes/admin/Registeration.php';
+require '../routes/admin/AdminOprations.php';
 
 
 function sendSms($mobile ,$otp) {
     $message = "به نور الصالحین خوش آمدید رمز عبور شما :" . $otp ;
     $query=http_build_query(array('receptor' => $mobile , 'message' => $message), null, "&", PHP_QUERY_RFC3986);
-     CallAPI("get",'v1/5742436474485749634F744D4241726D6B52647872673D3D/sms/send.json?'.$query ,array(),array());
+     CallAPI("get",'v1/71576641695278595A756D65534F324A6C486E414F334F6A7A2F696753717A6D/sms/send.json?'.$query ,array(),array());
 
 //    try {
 //
@@ -137,6 +139,7 @@ function CallAPI($method, $api, $data, $headers) {
             break;
     }
     $response = curl_exec($curl);
+
 
     /* Check for 404 (file not found). */
 //    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);

@@ -14,7 +14,7 @@
       }
       function connect() {
           $this->conn=new mysqli(DB_HOST,DB_USERNAME,DB_PASSWORD,DB_NAME);
-          $this->conn->set_charset('utf8');
+          $this->conn->set_charset('utf8mb4');
           if (mysqli_connect_errno()) {
               echo "connect faild";
           }

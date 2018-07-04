@@ -17,7 +17,7 @@ $app->post("/register" , function () use ($app) {
 
 
         if ($result==1 || $result==2) {
-       //     sendSms($mobile,$otp);
+         //   sendSms($mobile,$otp);
             $response['error'] = false ;
             $response['message'] = "پیامک حاوی کد فعال سازی برای شما ارسال گردید";
 
@@ -28,30 +28,43 @@ $app->post("/register" , function () use ($app) {
 
     }
 
-
-
-
-
     echoResponse(201,$response);
-
-
-
 }) ;
 $app->post('/verify' , function () use ($app) {
-    $response = array();
+ //   $response = array();
     verifyRequiredParams(array('mobile' , 'otp'));
     $mobile = $app->request->post('mobile');
     $otp = $app->request->post('otp');
     $db = new User_Handler();
-    $user= $db->activeUser($mobile,$otp);
-    if ($user==null) {
-        $response['error'] = true;
-        $response['message'] = 'کد ارسال شده اشتباه میباشد';
-    }else {
-        $response['error'] = false ;
-        $response['message'] = 'خوش آمدید';
-        $response['user'] = $user;
-    }
+    $response= $db->activeUser($mobile,$otp);
+//    if ($user==null) {
+//        $response['error'] = true;
+//        $response['message'] = 'کد ارسال شده اشتباه میباشد';
+//    }else {
+//        $response['error'] = false ;
+//        $response['message'] = 'خوش آمدید';
+//        $response['user'] = $user;
+//    }
+    echoResponse(200,$response);
+
+});
+//vase be rooz resanie code firebase userha
+
+$app->put('/updatefcm/:id' , function ($user_id) use ($app) {
+    verifyRequiredParams(array('fcm_code'));
+    $fcm_code = $app->request->put("fcm_code");
+    $db = new User_Handler();
+    $response = $db->updateFcmCode($user_id,$fcm_code);
+    echoResponse(200,$response);
+
+});
+
+$app->put('/updateUsername' , "authenticate"  ,function () use ($app) {
+       global $user_id ;
+    $username = $app->request->put("username");
+
+    $db = new User_Handler();
+    $response = $db->updateUsername($user_id,$username);
     echoResponse(200,$response);
 
 });

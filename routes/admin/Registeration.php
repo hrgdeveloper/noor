@@ -40,7 +40,6 @@ $app->post("/LogAdmin_noor" , function() use ($app) {
 
 
         $admin_temp= $db->getAdminByUsername($userName);
-
         $admin=$admin_temp->fetch_assoc();
 
         $response["error"] = false;
