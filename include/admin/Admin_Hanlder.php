@@ -273,9 +273,10 @@ user_id DESC
         $response = array();
         $response['chanels'] = array();
         // in query baes mishe ke akharin payam vared shode vase har canalam begirim
-       $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username,ms1.updated_at, ms1.message as last_message,ms1.type
-FROM chanels AS c join admin_login a on c.admin_id = a.admin_id
-left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) ");
+       $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username,ms1.updated_at, ms1.message as last_message,ms1.type ,
+ COUNT(co.comment_id) as cm_count FROM chanels AS c join admin_login a on c.admin_id = a.admin_id left JOIN message AS ms1 ON ms1.message_id = 
+ (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1)
+  left join comment co on c.chanel_id=co.chanel_id GROUP BY c.chanel_id ");
 
        $stmt->execute();
 
@@ -295,6 +296,52 @@ left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHE
 
    }
 
+
+    public function  getAllComments($chanel_id) {
+        $response=array();
+        $stComments= $this->conn->prepare("SELECT c.comment_id , c.text ,c.visible, c.created_at  , u.username , p.pic_thumb 
+                                               FROM comment c  
+                                              join users u on c.user_id = u.user_id LEFT JOIN user_profile p on u.user_id = p.user_id WHERE c.chanel_id like ? 
+                                              ORDER BY c.created_at DESC
+                                              ");
+        $stComments->bind_param("i",$chanel_id);
+
+        if ($stComments->execute()) {
+            $result = $stComments->get_result();
+            if ($result->num_rows >0) {
+                $response['error'] = false ;
+                $response["comments"] = array();
+                while ($single = $result->fetch_assoc()) {
+                    array_push($response["comments"] , $single);
+
+                }
+
+                return $response;
+
+            } else {
+                $response['error'] = true ;
+                $response['message'] = "هیج نظری در  این کانال  ثبت نگردیده است";
+                return $response;
+            }
+
+        } else {
+            $response['error'] = true ;
+            $response['message'] = "خطا در دسترسی به نظرات .. لطفا دوباره تلاش نمایید";
+            return $response;
+        }
+    }
+
+    public function updateCommentState($comment_id , $state)
+    {
+        $stmt = $this->conn->prepare("update comment set visible = ? WHERE comment_id = ?");
+        $stmt->bind_param("ii", $state, $comment_id);
+        $stmt->execute();
+        if ($this->conn->affected_rows == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
 
 //============================================================================NewMessageOprations=======================================\\
 

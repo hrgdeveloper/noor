@@ -61,7 +61,10 @@ $result = curl_exec($ch);
 
 
 if ($result === FALSE) {
-die('Curl failed: ' . curl_error($ch));
+    $respone=array();
+    $respone['error'] = true ;
+    $respone['message'] = 'Curl failed: ' . curl_error($ch);
+die(json_encode($respone));
 }
 
 // Close connection

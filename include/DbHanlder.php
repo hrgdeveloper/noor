@@ -19,7 +19,7 @@ class DbHanlder {
 
 
     public function isValidApikey($apikey) {
-   $stmt = $this->conn->prepare("select user_id from users where apikey like ? ");
+   $stmt = $this->conn->prepare("select user_id from users where apikey like ? and active = 1 ");
 
    $stmt->bind_param("s" , $apikey);
    $stmt->execute();

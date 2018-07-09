@@ -258,7 +258,26 @@ $app->post("/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) 
 
 
 });
+$app->get("/getAllComments/:chanel_id" , 'authenticateAdmin' ,  function ($chanel_id) {
+    $db=new Admin_Hanlder();
+    $response=$db->getAllComments($chanel_id);
+    echoResponse(200,$response);
 
+});
 
+$app->put("/setCommentState/:comment_id" , 'authenticateAdmin' ,  function ($comment_id) use ($app) {
+    $state = $app->request->post("state");
+    $response=array();
+    $db=new Admin_Hanlder();
+    $result=$db->updateCommentState($comment_id,$state);
+    if ($result>0) {
+        $response['error'] = false;
+        $response['message'] = "به روز رسانی انجام شد" ;
+    }else {
+        $response['error'] = true;
+        $response['message'] = "خطا در به روز رسانی" ;
+    }
+    echoResponse(200,$response);
 
+});
 

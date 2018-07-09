@@ -17,7 +17,6 @@ $app->get("/getUserCount" , function() {
    $response = $db->getUserCount();
    echoResponse(200,$response);
 });
-
 $app->get("/chanels/:chanel_id/getMessages/:page" , 'authenticate' , function ($chanel_id,$page) use ($app) {
     $response= array();
     global $user_id;
@@ -48,17 +47,33 @@ $app->get("/chanels/:chanel_id/getMessages/:page" , 'authenticate' , function ($
     echoResponse(201,$response);
 
 });
+$app->post("/likeMessage/:message_id" ,'authenticate' , function ($message_id) use ($app) {
 
-//SELECT c.name,c.description, ms1.message,ms1.type
-//FROM chanels AS c
-//LEFT JOIN message AS ms1 ON c.chanel_id = ms1.chanel_id
-//LEFT JOIN message AS ms2 ON c.chanel_id = ms2.chanel_id AND ms1.created_at < ms2.created_at
-//WHERE ms2.created_at IS NULL
+    global  $user_id;
 
-//SELECT c.name,c.description, ms1.message,ms1.type
-//FROM chanels AS c
-// JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1)
+    //0 for unlike (delete) like and 1 for like
+   $type = $app->request->post("type");
+    $db=new User_Handler();
+   $response = $db->setLike($type,$user_id,$message_id);
+   echoResponse(200,$response);
 
 
-//SELECT chanel_id,name,description,pic_thumb,updated_at,c.created_at ,a.username,m.message,m.type  FROM chanels c join admin_login a ON c.admin_id = a.admin_id LEFT join message AS m ON m.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1)
+});
+$app->post("/comment/:message_id" , 'authenticate' , function ($message_id) use ($app) {
+    global $user_id;
+    verifyRequiredParams(array("text"));
+    $text = $app->request->post("text");
+    $chanel_id = $app->request->post("chanel_id");
+    $db = new User_Handler();
+    $response = $db->makeComment($chanel_id, $text,$user_id,$message_id);
+    echoResponse(201,$response);
 
+});
+$app->get("/comment/:message_id" , 'authenticate' , function ($message_id) use ($app) {
+
+
+    $db = new User_Handler();
+    $response =   $db->getAllComments($message_id);
+    echoResponse(201,$response);
+
+});

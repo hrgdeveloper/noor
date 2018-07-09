@@ -93,12 +93,27 @@ class User_Handler
                 $st->fetch();
                 if ($active==1) {
 
+
+                    $stnew = $this->conn->prepare("SELECT  p.pic , p.pic_thumb from users u LEFT join user_profile p on u.user_id = p.user_id WHERE u.user_id like ?");
+                    $stnew->bind_param("i", $user_id);
+//
+//
+//
+//
+                    $stnew->execute();
+                   $result = $stnew->get_result()->fetch_assoc();
+
+
+
+
                     $this->updateUserSmsSate($user_id);
                     $user = array();
                     $user["user_id"] = $user_id;
                     $user["mobile"] = $mobile;
                     $user["apikey"] = $apikey;
                     $user["username"] = $username;
+                   $user["pic"] = $result['pic'] ;
+                   $user["pic_thumb"] = $result['pic_thumb'];
                     $user["created_at"] = $created_at;
 
                     $response['error'] = false ;
@@ -220,6 +235,126 @@ class User_Handler
         return $num_rows > 0;
     }
 
+    public function updateProfilePic($user_id ,$last_picname) {
+        $response=array();
+        $new_width = "250";
+        $new_height = "250";
+        $quality = 100 ;
+
+        $profile_pic_path = '../uploads/user_profile/pic/';
+        $profile_thumb_path = '../uploads/user_profile/thumb/';
+        $pic_info = pathinfo($_FILES['pic']['name']);
+        $extension = $pic_info['extension'];
+
+        $pic_name_to_store = $user_id .'_'. rand(1111,9999).'.'. $extension  ;
+        $pic_path = $profile_pic_path . $pic_name_to_store;
+        $thumb_path = $profile_thumb_path . $pic_name_to_store;
+
+        $filetype =$_FILES['pic']['type'];
+
+
+        list($width_orig,$height_orig) = getimagesize($_FILES['pic']['tmp_name']);
+        $ratio_orig = $width_orig/$height_orig;
+        if ($new_width/$new_height > $ratio_orig) {
+            $new_width = $new_height*$ratio_orig;
+        } else {
+            $new_height = $new_width/$ratio_orig;
+        }
+
+
+
+        if($filetype == "image/jpeg")
+        {
+            $imagecreate = "imagecreatefromjpeg";
+            $imageformat = "imagejpeg";
+        }
+        if($filetype == "image/png")
+        {
+            $imagecreate = "imagecreatefrompng";
+            $imageformat = "imagepng";
+        }
+        if($filetype == "image/gif")
+        {
+            $imagecreate= "imagecreatefromgif";
+            $imageformat = "imagegif";
+        }
+
+        $image_new = imagecreatetruecolor($new_width, $new_height);
+
+        $uploadedfile = $_FILES['pic']['tmp_name'];
+
+        $image = $imagecreate($uploadedfile);
+        // vase inke age png bood back groundesh siah nashe
+        if($extension == "gif" or $extension == "png"){
+            imagecolortransparent($image_new, imagecolorallocatealpha($image_new, 0, 0, 0, 127));
+            imagealphablending($image_new, false);
+            imagesavealpha($image_new, true);
+        }
+
+        imagecopyresampled($image_new, $image, 0, 0, 0, 0, $new_width, $new_height, $width_orig, $height_orig);
+        $imageformat($image_new, $thumb_path,$quality);
+
+        imagedestroy($image_new);
+
+
+
+        if (move_uploaded_file($uploadedfile , $pic_path)) {
+            $stmtDel = $this->conn->prepare("DELETE FROM user_profile where user_id = ?");
+            $stmtDel->bind_param("i", $user_id);
+            $stmtDel->execute();
+
+            $stmt = $this->conn->prepare("INSERT INTO user_profile (user_id,pic,pic_thumb)  values (?,?,?)");
+            $stmt->bind_param("iss", $user_id, $pic_name_to_store, $pic_name_to_store);
+            $stmt->execute();
+
+
+
+
+            if ($this->conn->affected_rows >0 ) {
+
+                $stmt = $this->conn->prepare("SELECT  pic,pic_thumb FROM user_profile where user_id like ?") ;
+
+                $stmt->bind_param("i",$user_id);
+                $stmt->execute();
+                $stmt->bind_result($pic,$pic_thumb);
+
+                $stmt->store_result();
+                $stmt->fetch();
+                $stmt->close();
+                $response['error'] = false;
+                $response['message'] = $pic;
+                // inja esme akse qabli ro migirm o az tariqe on akse qabli ro pak mikoim
+                if ($last_picname!="n" && $last_picname!=null) {
+                    try {
+                        unlink($profile_pic_path.$last_picname);
+                        unlink($profile_thumb_path.$last_picname);
+                    }catch (Exception $e) {
+
+                    }
+
+                }
+
+                return $response;
+
+            }
+            else {
+                $stmt->close();
+                $response['error'] = true;
+                $response['message'] = "خطا در ساخت سطر جدید ";
+                return $response;
+
+            }
+
+        }else {
+
+            $response['error'] = true;
+            $response['message'] = "خطلا در اپلود عسکس";
+            return $response;
+        }
+    }
+
+
+
 
     private function generateApiKey()
     {
@@ -234,12 +369,14 @@ class User_Handler
         // in query baes mishe ke akharin payam vared shode vase har canalam begirim
         $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username, ms1.message as last_message,ms1.type , ms1.updated_at
 FROM chanels AS c join admin_login a on c.admin_id = a.admin_id
-left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) ");
+left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) order by c.chanel_id ");
         $stmt->execute();
 
         $result = $stmt->get_result();
         if ($result->num_rows>0) {
-            $stmt_tead = $this->conn->prepare("SELECT c.chanel_id ,COUNT(m.message_id) as count FROM chanels c left join message m on c.chanel_id = m.chanel_id AND m.active = 1 GROUP BY c.chanel_id");
+            $stmt_tead = $this->conn->prepare("SELECT c.chanel_id ,COUNT(m.message_id) as count FROM chanels c left join message m on c.chanel_id = m.chanel_id AND m.active = 1 GROUP BY c.chanel_id
+order by c.chanel_id 
+");
             $stmt_tead->execute();
             $result_tedad = $stmt_tead->get_result();
 
@@ -378,8 +515,131 @@ public function getAllMessages($chanel_id,$page ,$message_id,$user_id)
     }
 }
 
+public function setLike($type ,$user_id , $message_id) {
+        $response = array();
+        if ($type==1) {
+
+            $stmt = $this->conn->prepare("INSERT INTO likes VALUES (?,?)");
+            $stmt->bind_param("ii",$user_id,$message_id);
+            $stmt->execute();
+            $result = $this->conn->affected_rows;
+            if ($result>0) {
+                $response["error"]=false;
+                $response["message"]= "liked";
+
+            }else {
+                $response["error"]=true;
+                $response["message"]= "error in like";
+            }
+            return $response;
+
+
+        }else  {
+            $stmt = $this->conn->prepare("DELETE FROM likes WHERE user_id like ? and message_id like ?");
+            $stmt->bind_param("ii",$user_id,$message_id);
+            $stmt->execute();
+            $result = $this->conn->affected_rows;
+            if ($result>0) {
+                $response["error"]=false;
+                $response["message"]= "unliked";
+
+            }else {
+                $response["error"]=true;
+                $response["message"]= "error in unlike";
+            }
+            return $response;
+        }
+}
+
+public function makeComment($chanel_id , $text ,$user_id ,$message_id ) {
+        $response=array();
+         if ($this->isUsernameCompelete($user_id)==0) {
+             $response['error'] = true ;
+             $response['message'] = 'نام کاربری تکمیل نگردیده است' ;
+             return $response;
+
+         }else {
+             $stmt = $this->conn->prepare("INSERT INTO comment (chanel_id,text,user_id,message_id)  values (?,?,?,?)");
+
+             $stmt->bind_param("isii",$chanel_id, $text, $user_id, $message_id);
+
+             if ($stmt->execute()) {
+                 if ($this->conn->affected_rows >0) {
+                     $response['error'] = false ;
+                     $response['message'] = 'نظر شما ثبت و بعد از تایید به نمایش در خواهد آمد' ;
+                     return $response;
+                 }else {
+                     $response['error'] = true ;
+                     $response['message'] = 'خطا در ثبت نظر' ;
+                     return $response;
+                 }
+             }else {
+
+                 $response['error'] = true ;
+                 $response['message'] = 'خطا در ثبت نظر پاییت' ;
+                 return $response;
+
+             }
+         }
 
 
 
+
+}
+
+public function  getAllComments($message_id) {
+        $response=array();
+
+         $stmt = $this->conn->prepare("select count(*) as count from likes where message_id like ? ");
+         $stmt->bind_param("i", $message_id);
+         $stmt->execute();
+         $stmt->bind_result($count);
+         $stmt->store_result();
+         $stmt->fetch();
+         $response['likes'] = $count;
+
+        $stComments= $this->conn->prepare("SELECT c.text , c.created_at , u.username , p.pic_thumb FROM comment c
+ join users u on c.user_id = u.user_id LEFT JOIN user_profile p on u.user_id = p.user_id WHERE c.message_id like ? and visible like 1 ");
+    $stComments->bind_param("i",$message_id);
+
+       if ($stComments->execute()) {
+           $result = $stComments->get_result();
+           if ($result->num_rows >0) {
+               $response['error'] = false ;
+               $response["comments"] = array();
+               while ($single = $result->fetch_assoc()) {
+                   array_push($response["comments"] , $single);
+
+               }
+
+               return $response;
+
+           } else {
+               $response['error'] = true ;
+               $response['message'] = "هیج نظری برای این پیام ثبت نگردیده است";
+               return $response;
+           }
+
+       } else {
+           $response['error'] = true ;
+           $response['message'] = "خطا در دسترسی به نظرات .. لطفا دوباره تلاش نمایید";
+           return $response;
+       }
+}
+
+public function isUsernameCompelete($user_id){
+    $stmt = $this->conn->prepare("select username  from users where user_id like ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $stmt->bind_result($username);
+    $stmt->store_result();
+    $stmt->fetch();
+
+    if (strcasecmp($username,"e")==0) {
+        return 0 ;
+    }else {
+        return 1 ;
+    }
+}
 
 }
