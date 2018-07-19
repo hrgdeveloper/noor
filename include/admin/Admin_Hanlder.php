@@ -347,7 +347,7 @@ user_id DESC
         $stmt->execute();
         if ($this->conn->affected_rows > 0) {
             $last_id = $this->conn->insert_id;
-            $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , url , updated_at ,a.username as admin_name  from message m 
+            $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time ,filename, url , updated_at ,a.username as admin_name  from message m 
                  join admin_login a on m.admin_id = a.admin_id  where message_id like ?");
 
             $stmt->bind_param("i", $last_id);
@@ -436,7 +436,7 @@ user_id DESC
 
             if ($this->conn->affected_rows > 0) {
                 $last_id = $this->conn->insert_id;
-                $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , url , updated_at ,a.username as admin_name  from message m 
+                $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , filename, url , updated_at ,a.username as admin_name  from message m 
                  join admin_login a on m.admin_id = a.admin_id  where message_id like ?");
 
                 $stmt->bind_param("i", $last_id);
@@ -502,7 +502,7 @@ user_id DESC
 
                 if ($this->conn->affected_rows > 0) {
                     $last_id = $this->conn->insert_id;
-                    $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , url , updated_at ,a.username as admin_name  from message m 
+                    $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time ,filename, url , updated_at ,a.username as admin_name  from message m 
                  join admin_login a on m.admin_id = a.admin_id  where message_id like ?");
 
                     $stmt->bind_param("i", $last_id);
@@ -533,6 +533,60 @@ user_id DESC
             ];
             return $object;
         }
+
+
+    }
+
+    public function makeAudioMessage($content , $chanel_id)
+    {
+        $audio_path = '../uploads/audio/';
+        $audio_info = pathinfo($_FILES['file']['name']);
+        $audio_oextension = $audio_info['extension'];
+        $audio_name_to_store_temp = rand(1111, 9999) . '_' . substr(abs(crc32(uniqid())), 0, 6);
+        $audio_name_to_store = $audio_name_to_store_temp . '.' . $audio_oextension;
+        $audio_path_toStore = $audio_path . $audio_name_to_store;
+
+   ;
+
+        if (move_uploaded_file($_FILES['file']['tmp_name'], $audio_path_toStore)) {
+            $lenth = round($_FILES['file']['size'] / 1024);
+            $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type  , lenth  , time,filename, url  ) values (?,?,?,? ,?,?,?,?)");
+            $stmt->bind_param("iisissss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['time'],$content['filename'] ,  $audio_name_to_store);
+            $stmt->execute();
+//
+            if ($this->conn->affected_rows > 0) {
+                $last_id = $this->conn->insert_id;
+                $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , filename, url , updated_at ,a.username as admin_name  from message m
+                 join admin_login a on m.admin_id = a.admin_id  where message_id like ?");
+
+                $stmt->bind_param("i", $last_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                $object = (object)[
+                    "error" => 0,
+                    "content" => $result
+
+                ];
+                return $object;
+
+            }else {
+                            $object = (object)[
+                "error" => 2
+
+            ];
+           return $object;
+            }
+
+        }else {
+            $object=(object) [
+                "error" => 1
+
+            ];
+            return $object;
+
+        }
+
 
 
     }

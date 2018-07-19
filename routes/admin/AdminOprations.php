@@ -252,15 +252,16 @@ $app->post(
             $app->stop();
         }
 
+
         $pic_info = pathinfo($_FILES['file']['name']);
         $extension = $pic_info['extension'];
-        if (!in_array($extension,$allowedExtensitons)) {
+        if (!in_array(strtolower($extension) ,$allowedExtensitons)) {
             $response['error'] =true ;
             $response['message'] = "فرمت ویدیو اپلود شده معتبر نمیباشد";
             echoResponse(400,$response);
             $app->stop();
         }
-
+        die();
 
         $info_pic = getimagesize($_FILES['thumb']['tmp_name']);
 
@@ -310,13 +311,60 @@ $app->post(
             $firebase->sendToTopic("chanel_".$final_result['chanel_id'],$push->getPush());
             echoResponse(200,$response);
 
+        }
+
+        }else if ($type==4) {
+        $allowedExtensitons = array('mp3' ,'wma', 'aac','wav' , 'amr' ,'flac' , 'ogg');
+        if(!isset($_FILES['file']['name']))
+        {
+            $response['error'] =true ;
+            $response['message'] = " فایل صوتی مورد نظر  انتخاب نشده";
+            echoResponse(400,$response);
+            $app->stop();
+        }
+        $pic_info = pathinfo($_FILES['file']['name']);
+        $extension = $pic_info['extension'];
+        if (!in_array($extension,$allowedExtensitons)) {
+            $response['error'] =true ;
+            $response['message'] = "فرمت فایل صوتی اپلود شده معتبر نمیباشد";
+            echoResponse(400,$response);
+            $app->stop();
+
+        }
+        $db = new Admin_Hanlder();
+        $result = $db->makeAudioMessage($content,$chanel_id);
+        if ($result->error==1) {
+            $response["error"] = true;
+            $response["message"] = "خطا در بارگزاری فایل صوتی ویدیو" ;
+            echoResponse(400, $response);
+        }else if ($result->error==2) {
+            $response["error"] = true;
+            $response["message"] = "خطا در ساخت پیام جدید " ;
+            echoResponse(400, $response);
+        }else {
+
+            $final_result = $result->content->fetch_assoc();
+
+            $response['error'] = false ;
+            $response['message'] = "ویدیو جدید ارسال شد" ;
+            $response['payload'] = $final_result ;
+
+            require_once __DIR__  . '/../../include/fcm/Firebase.php';
+            require_once __DIR__  . '/../../include/fcm/push.php';
+            $push  = new Push();
+
+            $firebase = new Firebase();
+            $push->setIsBackground(false);
+            $push->setPayload($final_result);
+            $push->setFlag(PUSH_NEW_MESSAGE);
+            $push->setMessage("پیام جدید");
+            $firebase->sendToTopic("chanel_".$final_result['chanel_id'],$push->getPush());
+            echoResponse(200,$response);
 
         }
 
 
-
-
-        }
+    }
 
 
 
