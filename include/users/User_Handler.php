@@ -443,9 +443,11 @@ order by c.chanel_id
     }
 
 //////////////////////////////////////////////////////////////////////MessageOprations\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-public function getAllMessages($chanel_id,$page ,$message_id,$user_id)
+public function getAllMessages($chanel_id ,$message_id,$user_id)
 {
+    $start=0;
     $limit = 20;
+
     $total = mysqli_num_rows(mysqli_query($this->conn, "SELECT message_id from message where active = 1 and 
  chanel_id like $chanel_id "));
 
@@ -458,18 +460,24 @@ public function getAllMessages($chanel_id,$page ,$message_id,$user_id)
         return $result;
 
     }else {
-        $page_limit = $total / $limit;
-        if (is_float($page_limit) || $total % $limit == 0) {
-            $page_limit = $page_limit + 1;
-            if ($page < $page_limit) {
 
-                $start = ($page - 1) * $limit;
-                  // in code ye selecte khili mamolie az tamamie sotonhaye message join ba like faqat vase inke tartibe desc az aval be akhar she injori kardim
-                $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
+        if ($message_id==0) {
+            $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
  sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
  (select * from message where chanel_id like ? and active like 1 and message_id > ? ORDER by message_id DESC limit $start, $limit) sub 
  left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");
+        }else {
+            $limit=12412415124313;
+            $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
+             sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+            (select * from message where chanel_id like ? and active like 1 and message_id > ? ORDER by message_id DESC limit $start, $limit) sub 
+            left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
+ 		");
+
+        }
+                  // in code ye selecte khili mamolie az tamamie sotonhaye message join ba like faqat vase inke tartibe desc az aval be akhar she injori kardim
+
 
 
                 //select sub.message_id , sub.admin_id, sub.chanel_id , sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , l.message_id , l.user_id from (select * from message where chanel_id like 1 and active like 1 and message_id > 100 ORDER by message_id DESC limit 20, 20) sub left join likes l on l.message_id = sub.message_id  order by sub.message_id ASC
@@ -491,29 +499,60 @@ public function getAllMessages($chanel_id,$page ,$message_id,$user_id)
 
                     // yani dige bozorgtar az id akhar messagi sabt nashode
                     $result = (object) [
-                        "error" => 3
+                        "error" => 2
                     ];
 
                     return $result;
                 }
+    }
+
+}
 
 
-            } else {
+    public function getAllTopMessages($chanel_id ,$top_id,$user_id)
+    {
+        $start=0;
+        $limit = 20;
 
+                $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
+ sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+ (select * from message where chanel_id like ? and active like 1 and message_id < ? ORDER by message_id DESC limit $start, $limit) sub 
+ left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
+ 		");
+
+            $stmt->bind_param("iii", $chanel_id,$top_id,$user_id);
+            $stmt->execute();
+            $content = $stmt->get_result();
+
+            if ($content->num_rows>0) {
                 $result = (object) [
-                    "error" => 2
+                    "error" => 0 ,
+                    "content" => $content
 
                 ];
 
                 return $result;
+            }  else {
 
+
+                $result = (object) [
+                    "error" => 1
+                ];
+
+                return $result;
             }
+
+
     }
 
+public function getLastCounts($chanel_id,$message_id) {
 
+    $total = mysqli_num_rows(mysqli_query($this->conn, "SELECT message_id from message where active = 1 and 
+ chanel_id like $chanel_id  and message_id > $message_id"));
 
-    }
+    return $total;
 }
+
 
 public function setLike($type ,$user_id , $message_id) {
         $response = array();

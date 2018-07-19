@@ -139,7 +139,8 @@ $app->get("/getAllChanels" , 'authenticateAdmin' ,  function () {
 
 });
 
-$app->post("/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) use ($app) {
+$app->post(
+    "/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) use ($app) {
      $response = array();
 
     $jsonContent = $app->request->post("content");
@@ -155,7 +156,9 @@ $app->post("/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) 
          $response['error'] = true;
          $response['message'] = "خطا در ارسال پیام";
      } else {
+
          $final_result = $result->fetch_assoc();
+
          require_once __DIR__  . '/../../include/fcm/Firebase.php';
          require_once __DIR__  . '/../../include/fcm/push.php';
          $push  = new Push();
@@ -166,7 +169,6 @@ $app->post("/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) 
          $push->setFlag(PUSH_NEW_MESSAGE);
          $push->setMessage("پیام جدید");
          $firebase->sendToTopic("chanel_".$final_result['chanel_id'],$push->getPush());
-
          $response['error'] = false ;
          $response['message'] = "پیام جدید ارسال شد" ;
          $response['payload'] = $final_result;
@@ -174,6 +176,7 @@ $app->post("/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) 
      }
 
     }else if ($type==2) {
+
 
         if(!isset($_FILES['file']['name']))
         {
@@ -238,14 +241,82 @@ $app->post("/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) 
 
         }
 
+    }else if ($type==3) {
+        $allowedExtensitons = array('flv' ,'FLV' , 'mp4','MP4' , 'm3u8' ,'M3U8' , 'mkv' ,'MKV', 'ts' , 'TS', '3gp','3GP' , 'mov','MOV' , 'avi','AVI'
+        , 'wmv' , 'WMV');
+        if(!isset($_FILES['file']['name']) || !isset($_FILES['thumb']['name']))
+        {
+            $response['error'] =true ;
+            $response['message'] = " ویدیو مورد نظر  انتخاب نشده";
+            echoResponse(400,$response);
+            $app->stop();
+        }
+
+        $pic_info = pathinfo($_FILES['file']['name']);
+        $extension = $pic_info['extension'];
+        if (!in_array($extension,$allowedExtensitons)) {
+            $response['error'] =true ;
+            $response['message'] = "فرمت ویدیو اپلود شده معتبر نمیباشد";
+            echoResponse(400,$response);
+            $app->stop();
+        }
+
+
+        $info_pic = getimagesize($_FILES['thumb']['tmp_name']);
+
+        if ($info_pic==false) {
+            $response["error"] = true;
+            $response["message"] = "خطا در شناسای نوع فایل" ;
+            echoResponse(400, $response);
+            $app->stop();
+        }
+
+
+        if (($info_pic[2] !== IMAGETYPE_GIF) && ($info_pic[2] !== IMAGETYPE_JPEG) && ($info_pic[2] !== IMAGETYPE_PNG)) {
+            $response["error"] = true;
+            $response["message"] = "فرمت فایل آپلود شده معتبر نمیباشد" ;
+            echoResponse(400, $response);
+            $app->stop();
+        }
+
+
+        $db=new Admin_Hanlder();
+        $result = $db->makeVideoMessage($content,$chanel_id);
+        if ($result->error==1) {
+            $response["error"] = true;
+            $response["message"] = "خطا در اپلود عکس ویدیو" .$_FILES["thumb"]["error"];;
+            echoResponse(400, $response);
+        }else if ($result->error==2) {
+            $response["error"] = true;
+            $response["message"] = "خطا در اپلود  ویدیو" .$_FILES["file"]["error"];;
+            echoResponse(400, $response);
+        }else {
+
+            $final_result = $result->content->fetch_assoc();
+
+            $response['error'] = false ;
+            $response['message'] = "ویدیو جدید ارسال شد" ;
+            $response['payload'] = $final_result ;
+
+            require_once __DIR__  . '/../../include/fcm/Firebase.php';
+            require_once __DIR__  . '/../../include/fcm/push.php';
+            $push  = new Push();
+
+            $firebase = new Firebase();
+            $push->setIsBackground(false);
+            $push->setPayload($final_result);
+            $push->setFlag(PUSH_NEW_MESSAGE);
+            $push->setMessage("پیام جدید");
+            $firebase->sendToTopic("chanel_".$final_result['chanel_id'],$push->getPush());
+            echoResponse(200,$response);
+
+
+        }
 
 
 
 
-
-
-
-    }
+        }
 
 
 
@@ -264,7 +335,6 @@ $app->get("/getAllComments/:chanel_id" , 'authenticateAdmin' ,  function ($chane
     echoResponse(200,$response);
 
 });
-
 $app->put("/setCommentState/:comment_id" , 'authenticateAdmin' ,  function ($comment_id) use ($app) {
     $state = $app->request->post("state");
     $response=array();
@@ -280,4 +350,5 @@ $app->put("/setCommentState/:comment_id" , 'authenticateAdmin' ,  function ($com
     echoResponse(200,$response);
 
 });
+
 

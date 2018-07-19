@@ -60,11 +60,13 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
 $result = curl_exec($ch);
 
 
+
+
 if ($result === FALSE) {
     $respone=array();
     $respone['error'] = true ;
     $respone['message'] = 'Curl failed: ' . curl_error($ch);
-die(json_encode($respone));
+
 }
 
 // Close connection

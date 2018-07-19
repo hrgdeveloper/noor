@@ -52,7 +52,7 @@ $app->get(
                 table,caption,tbody,tfoot,thead,tr,th,td,
                 article,aside,canvas,details,figcaption,figure,
                 footer,header,hgroup,menu,nav,section,summary,
-                time,mark,audio,video{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent;}
+                time,mark,audio,videos{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent;}
                 body{line-height:1;}
                 article,aside,details,figcaption,figure,
                 footer,header,hgroup,menu,nav,section{display:block;}
