@@ -131,14 +131,154 @@ $app->post("/makeChanel" , "authenticateAdmin", function () use ($app) {
 
 
 });
-
 $app->get("/getAllChanels" , 'authenticateAdmin' ,  function () {
     $db=new Admin_Hanlder();
     $response=$db->getAllChenls();
     echoResponse(200,$response);
 
 });
+$app->get("/getAllComments/:chanel_id" , 'authenticateAdmin' ,  function ($chanel_id) {
+    $db=new Admin_Hanlder();
+    $response=$db->getAllComments($chanel_id);
+    echoResponse(200,$response);
 
+});
+$app->put("/setCommentState/:comment_id" , 'authenticateAdmin' ,  function ($comment_id) use ($app) {
+    $state = $app->request->post("state");
+    $response=array();
+    $db=new Admin_Hanlder();
+    $result=$db->updateCommentState($comment_id,$state);
+    if ($result>0) {
+        $response['error'] = false;
+        $response['message'] = "به روز رسانی انجام شد" ;
+    }else {
+        $response['error'] = true;
+        $response['message'] = "خطا در به روز رسانی" ;
+    }
+    echoResponse(200,$response);
+
+});
+
+
+$app->post("/updateChanelPic/:chanel_id" , 'authenticateAdmin' , function ($chanel_d) use ($app) {
+
+    define ("MAX_SIZE","2000");
+    $last_picname =$app->request->post("last_pic_name");
+
+    if(!isset($_FILES['pic']['name']))
+    {
+        $response['error'] =true ;
+        $response['message'] = "عکس مورد نظر انتخاب نشده";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+
+    if ($_FILES['pic']['error'] != UPLOAD_ERR_OK ) {
+        $response['error'] =true ;
+        $response['message'] = "خطلا در اپلود عکس کانال ";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+    $pic_size = filesize($_FILES['pic']['tmp_name']);
+
+    if ($pic_size > MAX_SIZE*1024 ) {
+        $response["error"] = true;
+        $response["message"] = "حداکثر اندازه عکس 2 مگابایت میباشد" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+
+    $info_pic = getimagesize($_FILES['pic']['tmp_name']);
+
+    if ($info_pic==false) {
+        $response["error"] = true;
+        $response["message"] = "خطا در شناسای نوع فایل" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+
+
+    if (($info_pic[2] !== IMAGETYPE_GIF) && ($info_pic[2] !== IMAGETYPE_JPEG) && ($info_pic[2] !== IMAGETYPE_PNG)) {
+        $response["error"] = true;
+        $response["message"] = "فرمت فایل آپلود شده معتبر نمیباشد" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+
+
+    $db=new Admin_Hanlder();
+    $response  = $db->updateChanelPhoto($chanel_d,$last_picname);
+     echoResponse(200,$response);
+
+});
+$app->post("/addChanelPic/:chanel_id" , 'authenticateAdmin' , function ($chanel_d) use ($app) {
+
+    define ("MAX_SIZE","2000");
+    if(!isset($_FILES['pic']['name']))
+    {
+        $response['error'] =true ;
+        $response['message'] = "عکس مورد نظر انتخاب نشده";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+
+    if ($_FILES['pic']['error'] != UPLOAD_ERR_OK ) {
+        $response['error'] =true ;
+        $response['message'] = "خطلا در اپلود عکس کانال ";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+    $pic_size = filesize($_FILES['pic']['tmp_name']);
+
+    if ($pic_size > MAX_SIZE*1024 ) {
+        $response["error"] = true;
+        $response["message"] = "حداکثر اندازه عکس 2 مگابایت میباشد" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+
+    $info_pic = getimagesize($_FILES['pic']['tmp_name']);
+
+    if ($info_pic==false) {
+        $response["error"] = true;
+        $response["message"] = "خطا در شناسای نوع فایل" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+
+
+    if (($info_pic[2] !== IMAGETYPE_GIF) && ($info_pic[2] !== IMAGETYPE_JPEG) && ($info_pic[2] !== IMAGETYPE_PNG)) {
+        $response["error"] = true;
+        $response["message"] = "فرمت فایل آپلود شده معتبر نمیباشد" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+
+
+    $db=new Admin_Hanlder();
+    $response  = $db->addChanelPhoto($chanel_d);
+    echoResponse(200,$response);
+
+});
+$app->delete("/deleteChanelPhoto/:photo_id" , 'authenticateAdmin' , function ($photo_id) use ($app) {
+    $photo_name =$app->request->post("photo_name");
+    $db=new Admin_Hanlder();
+    $response  = $db->deleteChanelPhoto($photo_id,$photo_name);
+    echoResponse(202,$response);
+});
+$app->get("/getAllChanelsPhotos/:chanel_id"  , function ($chanel_id) {
+    $db = new Admin_Hanlder();
+    $response = $db->getAllChanelPhotoes($chanel_id);
+    echoResponse(201,$response);
+
+
+
+});
+
+
+
+
+//////////////////////////////////////////////////////////Messages\\\\\\\\\\\\\\\\\\\\
 $app->post(
     "/chanels/:id/message" , "authenticateAdmin" , function ($chanel_id) use ($app) {
      $response = array();
@@ -335,7 +475,7 @@ $app->post(
         $result = $db->makeAudioMessage($content,$chanel_id);
         if ($result->error==1) {
             $response["error"] = true;
-            $response["message"] = "خطا در بارگزاری فایل صوتی ویدیو" ;
+            $response["message"] = "خطا در بارگزاری فایل صوتی " ;
             echoResponse(400, $response);
         }else if ($result->error==2) {
             $response["error"] = true;
@@ -346,7 +486,7 @@ $app->post(
             $final_result = $result->content->fetch_assoc();
 
             $response['error'] = false ;
-            $response['message'] = "ویدیو جدید ارسال شد" ;
+            $response['message'] = " فایل صوتی جدید ارسال شد" ;
             $response['payload'] = $final_result ;
 
             require_once __DIR__  . '/../../include/fcm/Firebase.php';
@@ -364,39 +504,46 @@ $app->post(
         }
 
 
+    }else if ($type==5) {
+        if (!isset($_FILES['file']['name'])) {
+            $response['error'] = true;
+            $response['message'] = " فایل  مورد نظر  انتخاب نشده";
+            echoResponse(400, $response);
+            $app->stop();
+        }
+        $db = new Admin_Hanlder();
+        $result = $db->makeFileMessage($content, $chanel_id);
+        if ($result->error == 1) {
+            $response["error"] = true;
+            $response["message"] = "خطا در بارگزاری فایل  ";
+            echoResponse(400, $response);
+        } else if ($result->error == 2) {
+            $response["error"] = true;
+            $response["message"] = "خطا در ساخت پیام جدید ";
+            echoResponse(400, $response);
+        } else {
+
+            $final_result = $result->content->fetch_assoc();
+
+            $response['error'] = false;
+            $response['message'] = "فایل جدید ارسال شد";
+            $response['payload'] = $final_result;
+
+            require_once __DIR__ . '/../../include/fcm/Firebase.php';
+            require_once __DIR__ . '/../../include/fcm/push.php';
+            $push = new Push();
+
+            $firebase = new Firebase();
+            $push->setIsBackground(false);
+            $push->setPayload($final_result);
+            $push->setFlag(PUSH_NEW_MESSAGE);
+            $push->setMessage("پیام جدید");
+            $firebase->sendToTopic("chanel_" . $final_result['chanel_id'], $push->getPush());
+            echoResponse(200, $response);
+        }
     }
 
-
-
-
-
-
-
-
-
-
-
 });
-$app->get("/getAllComments/:chanel_id" , 'authenticateAdmin' ,  function ($chanel_id) {
-    $db=new Admin_Hanlder();
-    $response=$db->getAllComments($chanel_id);
-    echoResponse(200,$response);
 
-});
-$app->put("/setCommentState/:comment_id" , 'authenticateAdmin' ,  function ($comment_id) use ($app) {
-    $state = $app->request->post("state");
-    $response=array();
-    $db=new Admin_Hanlder();
-    $result=$db->updateCommentState($comment_id,$state);
-    if ($result>0) {
-        $response['error'] = false;
-        $response['message'] = "به روز رسانی انجام شد" ;
-    }else {
-        $response['error'] = true;
-        $response['message'] = "خطا در به روز رسانی" ;
-    }
-    echoResponse(200,$response);
-
-});
 
 

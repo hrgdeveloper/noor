@@ -463,14 +463,14 @@ public function getAllMessages($chanel_id ,$message_id,$user_id)
 
         if ($message_id==0) {
             $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
- sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+ sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename, sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
  (select * from message where chanel_id like ? and active like 1 and message_id > ? ORDER by message_id DESC limit $start, $limit) sub 
  left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");
         }else {
             $limit=12412415124313;
             $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
-             sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+             sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
             (select * from message where chanel_id like ? and active like 1 and message_id > ? ORDER by message_id DESC limit $start, $limit) sub 
             left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");
@@ -515,7 +515,7 @@ public function getAllMessages($chanel_id ,$message_id,$user_id)
         $limit = 20;
 
                 $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
- sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+ sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
  (select * from message where chanel_id like ? and active like 1 and message_id < ? ORDER by message_id DESC limit $start, $limit) sub 
  left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");

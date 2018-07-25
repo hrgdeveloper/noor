@@ -249,6 +249,189 @@ user_id DESC
 
     }
 
+    public function updateChanelPhoto($chanel_id,$last_picname) {
+        $response = array();
+        $thumb_path = '../uploads/chanel_thumb/';
+        $prifle_pic = '../uploads/chanel_pics/';
+        $pic_info = pathinfo($_FILES['pic']['name']);
+        $extension = $pic_info['extension'];
+
+        $pic_name_to_store = rand(1111, 9999) . '_' . $pic_info['basename'];
+        $pic_path = $prifle_pic . $pic_name_to_store;
+
+        $filetype = $_FILES['pic']['type'];
+
+
+        $thumb_path_to_store = $thumb_path . $pic_name_to_store;
+
+        list($filewidth, $fileheight) = getimagesize($_FILES['pic']['tmp_name']);
+
+
+        if ($filetype == "image/jpeg") {
+            $imagecreate = "imagecreatefromjpeg";
+            $imageformat = "imagejpeg";
+        }
+        if ($filetype == "image/png") {
+            $imagecreate = "imagecreatefrompng";
+            $imageformat = "imagepng";
+        }
+        if ($filetype == "image/gif") {
+            $imagecreate = "imagecreatefromgif";
+            $imageformat = "imagegif";
+        }
+        $new_width = "250";
+        $new_height = "250";
+        $image_new = imagecreatetruecolor($new_width, $new_height);
+
+        $uploadedfile = $_FILES['pic']['tmp_name'];
+        $image = $imagecreate($uploadedfile);
+        // vase inke age png bood back groundesh siah nashe
+        if ($extension == "gif" or $extension == "png") {
+            imagecolortransparent($image_new, imagecolorallocatealpha($image_new, 0, 0, 0, 127));
+            imagealphablending($image_new, false);
+            imagesavealpha($image_new, true);
+        }
+
+        imagecopyresampled($image_new, $image, 0, 0, 0, 0, $new_width, $new_height, $filewidth, $fileheight);
+        $imageformat($image_new, $thumb_path_to_store);
+
+
+        if (!move_uploaded_file($_FILES['pic']['tmp_name'], $pic_path)) {
+         $response['error']  = true ;
+         $response['message'] = 'خطا در اپلود عکس ' ;
+         return $response ;
+        } else {
+            $last_insert = null;
+            $this->conn->begin_transaction();
+            $commit = true;
+            try {
+                $stmt = $this->conn->prepare("update chanels set thumb = ? where chanel_id like ? ");
+                $stmt->bind_param("si", $pic_name_to_store,$chanel_id);
+                $stmt->execute();
+                $stmt->close();
+//                $last_insert = $this->conn->insert_id;
+//                // Check for successful insertion
+//
+//                $last_id = $this->conn->insert_id;
+                $st = $this->conn->prepare("update  chanels_photos set photo = ? where chanel_id like ?");
+                $st->bind_param("si", $pic_name_to_store, $chanel_id);
+                $st->execute();
+                $st->close();
+                $this->conn->commit();
+
+            } catch (DOException $e) {
+                $this->conn->rollback();
+                $commit = false;
+            }
+
+            if ($commit) {
+
+                if ($last_picname!="n" && $last_picname!=null) {
+                    try {
+                        unlink($thumb_path.$last_picname);
+                        unlink($prifle_pic.$last_picname);
+                    }catch (Exception $e) {
+
+                    }
+
+                }
+
+                $response['error']  = false ;
+                $response['message'] = ' به روز رسانی انجام شد' ;
+                $response['pic_name'] = $pic_name_to_store;
+                return $response ;
+
+
+            } else {
+
+                $response['error']  = true ;
+                $response['message'] = '  خطا در ساخت ستون جدید' ;
+                return $response ;
+            }
+
+
+        }
+
+
+    }
+    public function addChanelPhoto($chanel_id) {
+        $response = array();
+
+        $prifle_pic = '../uploads/chanel_pics/';
+        $pic_info = pathinfo($_FILES['pic']['name']);
+        $pic_name_to_store = rand(1111, 9999) . '_' . $pic_info['basename'];
+        $pic_path = $prifle_pic . $pic_name_to_store;
+
+        if (!move_uploaded_file($_FILES['pic']['tmp_name'], $pic_path)) {
+            $response['error']  = true ;
+            $response['message'] = 'خطا در اپلود عکس ' ;
+            return $response ;
+        } else {
+
+                $st = $this->conn->prepare("insert into   chanels_photos (chanel_id,photo) values (?,?)");
+                $st->bind_param("is",  $chanel_id , $pic_name_to_store);
+                $st->execute();
+                       $st->close();
+                if ($this->conn->affected_rows==0){
+                    $response['error']  = true ;
+                    $response['message'] = 'خطا در ساخت سطر جدید ' ;
+                    return $response ;
+                }else {
+                    $response['error']  = false ;
+                    $response['message'] = 'عکس جدید اضافه گردید' ;
+                    return $response ;
+                }
+
+
+
+        }
+    }
+    public  function deleteChanelPhoto($photo_id , $photo_name) {
+
+        $prifle_pic = '../uploads/chanel_pics/';
+        $response = array();
+        $st = $this->conn->prepare("DELETE from chanels_photos where chanel_photo_id = ? ");
+        $st->bind_param("i",  $photo_id);
+        $st->execute();
+        $st->close();
+        if ($this->conn->affected_rows==0){
+            $response['error']  = true ;
+            $response['message'] = 'خطا در حذف ' ;
+            return $response;
+        }else {
+            $response['error']  = false ;
+            $response['message'] = 'حذف عکس مورد نظر انجام شد';
+            if ($photo_name!="n" && $photo_name!=null) {
+                try {
+                    unlink($prifle_pic.$photo_name);
+                }catch (Exception $e) {
+
+                }
+
+            }
+            return $response;
+
+        }
+    }
+
+    public function getAllChanelPhotoes($chanel_id) {
+        $response = array();
+        $response['photos'] = array();
+        $st = $this->conn->prepare("select chanel_photo_id,chanel_id,photo  from chanels_photos where chanel_id like ?");
+        $st->bind_param("i",  $chanel_id);
+        $st->execute();
+        $result = $st->get_result();
+        while ($single = $result->fetch_assoc()) {
+
+            array_push($response['photos'] , $single);
+        }
+        $st->close();
+
+        return $response;
+
+    }
+
+
     private function chanelExists($name)
     {
         $stmt = $this->conn->prepare("select chanel_id from chanels where name like ?");
@@ -288,7 +471,6 @@ user_id DESC
         return $response;
 
     }
-
 
     public function getAllComments($chanel_id)
     {
@@ -541,12 +723,12 @@ user_id DESC
     {
         $audio_path = '../uploads/audio/';
         $audio_info = pathinfo($_FILES['file']['name']);
-        $audio_oextension = $audio_info['extension'];
+        $audio_eextension = $audio_info['extension'];
         $audio_name_to_store_temp = rand(1111, 9999) . '_' . substr(abs(crc32(uniqid())), 0, 6);
-        $audio_name_to_store = $audio_name_to_store_temp . '.' . $audio_oextension;
+        $audio_name_to_store = $audio_name_to_store_temp . '.' . $audio_eextension;
         $audio_path_toStore = $audio_path . $audio_name_to_store;
 
-   ;
+
 
         if (move_uploaded_file($_FILES['file']['tmp_name'], $audio_path_toStore)) {
             $lenth = round($_FILES['file']['size'] / 1024);
@@ -576,6 +758,60 @@ user_id DESC
 
             ];
            return $object;
+            }
+
+        }else {
+            $object=(object) [
+                "error" => 1
+
+            ];
+            return $object;
+
+        }
+
+
+
+    }
+
+    public function makeFileMessage($content , $chanel_id)
+    {
+        $file_path = '../uploads/files/';
+        $file_info = pathinfo($_FILES['file']['name']);
+        $file_eextension = $file_info['extension'];
+        $file_name_to_store_temp = rand(1111, 9999) . '_' . substr(abs(crc32(uniqid())), 0, 6);
+        $file_name_to_store = $file_name_to_store_temp . '.' . $file_eextension;
+        $file_path_toStore = $file_path . $file_name_to_store;
+
+
+
+        if (move_uploaded_file($_FILES['file']['tmp_name'], $file_path_toStore)) {
+            $lenth = round($_FILES['file']['size'] / 1024);
+            $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type  , lenth  ,filename, url  ) values (?,?,?,? ,?,?,?)");
+            $stmt->bind_param("iisisss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['filename'] ,  $file_name_to_store);
+            $stmt->execute();
+//
+            if ($this->conn->affected_rows > 0) {
+                $last_id = $this->conn->insert_id;
+                $stmt = $this->conn->prepare("select message_id  ,m.admin_id , chanel_id , message , pic_thumb , type , lenth, time , filename, url , updated_at ,a.username as admin_name  from message m
+                 join admin_login a on m.admin_id = a.admin_id  where message_id like ?");
+
+                $stmt->bind_param("i", $last_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                $object = (object)[
+                    "error" => 0,
+                    "content" => $result
+
+                ];
+                return $object;
+
+            }else {
+                $object = (object)[
+                    "error" => 2
+
+                ];
+                return $object;
             }
 
         }else {
