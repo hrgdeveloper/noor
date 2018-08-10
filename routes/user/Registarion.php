@@ -60,9 +60,15 @@ $app->put('/updatefcm/:id' , function ($user_id) use ($app) {
 $app->put('/updateUsername' , "authenticate"  ,function () use ($app) {
     global $user_id ;
     $username = $app->request->put("username");
+    if (preg_match('/\s/',$username)==1) {
+        $response['error'] = true ;
+        $response['message'] = "این نام کاربری غیر مجاز است";
+    }else {
+        $db = new User_Handler();
+        $response = $db->updateUsername($user_id,$username);
+    }
 
-    $db = new User_Handler();
-    $response = $db->updateUsername($user_id,$username);
+
     echoResponse(200,$response);
 
 });

@@ -39,8 +39,80 @@ $app->put("/changeUserActive/:user_id" , "authenticateAdmin" , function ($user_i
       }
       echoResponse( 201,$response);
 });
-//=======================================================forChanels=============================================================\\
+$app->post("/notify" , "authenticateAdmin" , function () use ($app) {
+    $response=array();
+    $detail = $app->request->post("details");
+    $real_detaisl = json_decode($detail,true);
 
+    $message =$real_detaisl["message"];
+    $title = $real_detaisl["title"];
+
+
+    define ("MAX_SIZE","4000");
+    if(!isset($_FILES['pic']['name']))
+    {
+        $response['error'] =true ;
+        $response['message'] = "عکس مورد نظر انتخاب نشده";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+    if ($_FILES['pic']['error'] != UPLOAD_ERR_OK ) {
+        $response['error'] =true ;
+        $response['message'] = "خطلا در اپلود عکس کانال ";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+    $pic_size = filesize($_FILES['pic']['tmp_name']);
+    if ($pic_size > MAX_SIZE*1024 ) {
+        $response["error"] = true;
+        $response["message"] = "حداکثر اندازه عکس 2 مگابایت میباشد" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+    $info_pic = getimagesize($_FILES['pic']['tmp_name']);
+    if ($info_pic==false) {
+        $response["error"] = true;
+        $response["message"] = "خطا در شناسای نوع فایل" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+    if (($info_pic[2] !== IMAGETYPE_GIF) && ($info_pic[2] !== IMAGETYPE_JPEG) && ($info_pic[2] !== IMAGETYPE_PNG)) {
+        $response["error"] = true;
+        $response["message"] = "فرمت فایل آپلود شده معتبر نمیباشد" ;
+        echoResponse(400, $response);
+        $app->stop();
+    }
+    $notify_path = '../uploads/notify/';
+    $pic_info = pathinfo($_FILES['pic']['name']);
+    $pic_name_to_store = rand(1111, 9999) . '_' . $pic_info['basename'];
+    $pic_path = $notify_path . $pic_name_to_store;
+    if (move_uploaded_file($_FILES['pic']['tmp_name'],$pic_path)) {
+        require_once __DIR__  . '/../../include/fcm/Firebase.php';
+        require_once __DIR__  . '/../../include/fcm/push.php';
+        $push = new Push();
+        $firebase = new Firebase();
+        $push->setIsBackground(false);
+        $push->setImage($pic_name_to_store);
+        $push->setTitle($title);
+        $push->setMessage($message);
+        $push->setFlag(PUSH_NEW_NOTIFY);
+        $firebase->sendToTopic("global", $push->getPush());
+
+        $response["error"] = false;
+        $response["message"] = "پیام با موفقیت ارسال شد";
+    }else {
+        $response["error"] = false;
+        $response["message"] = $_FILES["pic"]["error"];
+    }
+
+  echoResponse(201,$response);
+
+
+
+
+
+});
+//=======================================================forChanels=============================================================\\
 $app->post("/makeChanel" , "authenticateAdmin", function () use ($app) {
     verifyRequiredParams(array("details"));
        $details = $app->request->post("details");
@@ -270,9 +342,6 @@ $app->get("/getAllChanelsPhotos/:chanel_id"  , function ($chanel_id) {
     $db = new Admin_Hanlder();
     $response = $db->getAllChanelPhotoes($chanel_id);
     echoResponse(201,$response);
-
-
-
 });
 
 
@@ -362,15 +431,12 @@ $app->post(
             echoResponse(400, $response);
         }else {
             $final_result = $result->content->fetch_assoc();
-
             $response['error'] = false ;
             $response['message'] = "پیام جدید ارسال شد" ;
             $response['payload'] = $final_result ;
-
             require_once __DIR__  . '/../../include/fcm/Firebase.php';
             require_once __DIR__  . '/../../include/fcm/push.php';
             $push  = new Push();
-
             $firebase = new Firebase();
             $push->setIsBackground(false);
             $push->setPayload($final_result);
@@ -401,7 +467,7 @@ $app->post(
             echoResponse(400,$response);
             $app->stop();
         }
-        die();
+
 
         $info_pic = getimagesize($_FILES['thumb']['tmp_name']);
 
@@ -434,7 +500,6 @@ $app->post(
         }else {
 
             $final_result = $result->content->fetch_assoc();
-
             $response['error'] = false ;
             $response['message'] = "ویدیو جدید ارسال شد" ;
             $response['payload'] = $final_result ;

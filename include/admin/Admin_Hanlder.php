@@ -19,28 +19,51 @@ class Admin_Hanlder
     {
 
         // Generating password hash
-        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        if ($this->isAdminExist($username)) {
+            return 2;
+        }else {
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $api_key = $this->generateApiKey();
+            $stmt = $this->conn->prepare("INSERT INTO admin_login(username, password , apikey) values(?,?,?)");
+            $stmt->bind_param("sss", $username, $password_hash, $api_key);
+            $result = $stmt->execute();
+            $stmt->close();
+            // Check for successful insertion
+            if ($result) {
+                return 1;
 
-        // Generating API key
-        $api_key = $this->generateApiKey();
+            } else {
+                // Failed to create user
+                return 0;
+            }
+        }
 
-        $stmt = $this->conn->prepare("INSERT INTO admin_login(username, password , apikey) values(?,?,?)");
+    }
+
+    public function isAdminExist($username){
+        $stmt = $this->conn->prepare("SELECT admin_id  FROM admin_login WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $reslt = $stmt->get_result();
+
+        if ($reslt->num_rows>0) {
+            return true;
+        }else {
+            return false;
+        }
+    }
 
 
-        $stmt->bind_param("sss", $username, $password_hash, $api_key);
+    public function checkMainAdmin($apikey) {
+        $stmt = $this->conn->prepare("SELECT admin_id  FROM admin_login WHERE apikey = ? and role = 2 ");
+        $stmt->bind_param("s", $apikey);
+        $stmt->execute();
+        $reslt = $stmt->get_result();
 
-        $result = $stmt->execute();
-
-
-        $stmt->close();
-
-        // Check for successful insertion
-        if ($result) {
-            return 1;
-
-        } else {
-            // Failed to create user
-            return 0;
+        if ($reslt->num_rows>0) {
+            return true;
+        }else {
+            return false;
         }
     }
 
@@ -313,7 +336,7 @@ user_id DESC
 //                // Check for successful insertion
 //
 //                $last_id = $this->conn->insert_id;
-                $st = $this->conn->prepare("update  chanels_photos set photo = ? where chanel_id like ?");
+                $st = $this->conn->prepare("update  chanels_photos set photo = ? where chanel_id like ? limit 1");
                 $st->bind_param("si", $pic_name_to_store, $chanel_id);
                 $st->execute();
                 $st->close();
@@ -609,7 +632,7 @@ user_id DESC
 //    $image_base_64 =  base64_encode($temp);
 //    $final_thumb  = $image = 'data:image/'.$extension.';base64,'.$image_base_64;
 
-        $lenth = round(filesize($uploadedfile) / 1024);
+        $lenth = filesize($uploadedfile);
 
         if (move_uploaded_file($uploadedfile, $pic_path)) {
             $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type , pic_thumb    , lenth  , url  ) values (?,?,?,? , ? , ? ,?)");
@@ -674,9 +697,7 @@ user_id DESC
         $thumb_path_toStore = $video_thumb_path . $thumb_name_to_store;
 
         if (move_uploaded_file($_FILES['thumb']['tmp_name'], $thumb_path_toStore)) {
-
-
-            $lenth = round(filesize($_FILES['file']['tmp_name']) / 1024);
+            $lenth = filesize($_FILES['file']['tmp_name']) ;
             if (move_uploaded_file($_FILES['file']['tmp_name'], $video_path_toStore)) {
                 $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type , pic_thumb    , lenth  , time, url  ) values (?,?,?,? , ? , ?,?,?)");
                 $stmt->bind_param("iisissss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $thumb_name_to_store, $lenth, $content['time'], $video_name_to_store);
@@ -715,8 +736,6 @@ user_id DESC
             ];
             return $object;
         }
-
-
     }
 
     public function makeAudioMessage($content , $chanel_id)
@@ -728,10 +747,8 @@ user_id DESC
         $audio_name_to_store = $audio_name_to_store_temp . '.' . $audio_eextension;
         $audio_path_toStore = $audio_path . $audio_name_to_store;
 
-
-
         if (move_uploaded_file($_FILES['file']['tmp_name'], $audio_path_toStore)) {
-            $lenth = round($_FILES['file']['size'] / 1024);
+            $lenth = $_FILES['file']['size'];
             $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type  , lenth  , time,filename, url  ) values (?,?,?,? ,?,?,?,?)");
             $stmt->bind_param("iisissss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['time'],$content['filename'] ,  $audio_name_to_store);
             $stmt->execute();
@@ -785,7 +802,8 @@ user_id DESC
 
 
         if (move_uploaded_file($_FILES['file']['tmp_name'], $file_path_toStore)) {
-            $lenth = round($_FILES['file']['size'] / 1024);
+            $lenth = $_FILES['file']['size'];
+         //   $lenth = round($_FILES['file']['size'] / 1024);
             $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type  , lenth  ,filename, url  ) values (?,?,?,? ,?,?,?)");
             $stmt->bind_param("iisisss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['filename'] ,  $file_name_to_store);
             $stmt->execute();
