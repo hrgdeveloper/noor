@@ -118,8 +118,6 @@ $app->post("/makeChanel" , "authenticateAdmin", function () use ($app) {
        $details = $app->request->post("details");
        $real_detaisl = json_decode($details,true);
        $response=array();
-
-
     define ("MAX_SIZE","2000");
 
     if(!isset($_FILES['pic']['name']))
@@ -203,6 +201,23 @@ $app->post("/makeChanel" , "authenticateAdmin", function () use ($app) {
 
 
 });
+$app->put("/updateChanel/:chanel_id", "authenticateAdmin" , function ($chanel_id) use ($app) {
+    $response = array();
+   $name = $app->request->post("name");
+   $description = $app->request->post("des");
+    $db = new Admin_Hanlder();
+    $result  = $db->updateChanel($chanel_id,$name,$description);
+    if ($result==0) {
+        $response['error'] = true;
+        $response['message'] = "خطا در به روز رسانی" ;
+    }else {
+        $response['error'] = false;
+        $response['message'] = "به روز رسانی انجام گردید" ;
+    }
+    echoResponse(201,$response);
+
+});
+
 $app->get("/getAllChanels" , 'authenticateAdmin' ,  function () {
     $db=new Admin_Hanlder();
     $response=$db->getAllChenls();
@@ -344,6 +359,13 @@ $app->get("/getAllChanelsPhotos/:chanel_id"  , function ($chanel_id) {
     echoResponse(201,$response);
 });
 
+$app->get("/getComments/:chanel_id" , 'authenticateAdmin' , function ($chanel_id) use ($app) {
+    $last_id=  $app->request->get("last_id");
+    $db = new Admin_Hanlder();
+    $response = $db->getAllCommentss($last_id ,  $chanel_id);
+    echoResponse(201,$response);
+
+});
 
 
 

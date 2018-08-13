@@ -21,7 +21,7 @@ class Admin_Hanlder
         // Generating password hash
         if ($this->isAdminExist($username)) {
             return 2;
-        }else {
+        } else {
             $password_hash = password_hash($password, PASSWORD_DEFAULT);
             $api_key = $this->generateApiKey();
             $stmt = $this->conn->prepare("INSERT INTO admin_login(username, password , apikey) values(?,?,?)");
@@ -40,29 +40,31 @@ class Admin_Hanlder
 
     }
 
-    public function isAdminExist($username){
+    public function isAdminExist($username)
+    {
         $stmt = $this->conn->prepare("SELECT admin_id  FROM admin_login WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $reslt = $stmt->get_result();
 
-        if ($reslt->num_rows>0) {
+        if ($reslt->num_rows > 0) {
             return true;
-        }else {
+        } else {
             return false;
         }
     }
 
 
-    public function checkMainAdmin($apikey) {
+    public function checkMainAdmin($apikey)
+    {
         $stmt = $this->conn->prepare("SELECT admin_id  FROM admin_login WHERE apikey = ? and role = 2 ");
         $stmt->bind_param("s", $apikey);
         $stmt->execute();
         $reslt = $stmt->get_result();
 
-        if ($reslt->num_rows>0) {
+        if ($reslt->num_rows > 0) {
             return true;
-        }else {
+        } else {
             return false;
         }
     }
@@ -154,6 +156,9 @@ user_id DESC
 
     public function makeChanel($details)
     {
+
+
+
         if ($this->chanelExists($details['name'])) {
 
             $oject = (object)[
@@ -272,7 +277,21 @@ user_id DESC
 
     }
 
-    public function updateChanelPhoto($chanel_id,$last_picname) {
+    public function updateChanel($chanel_id , $name , $des) {
+
+        $stmt = $this->conn->prepare("UPDATE chanels set name = ? , description = ? where chanel_id =  ?  ");
+        $stmt->bind_param("ssi", $name, $des, $chanel_id);
+        $stmt->execute();
+        if ($this->conn->affected_rows == 0) {
+            return false;
+        } else {
+            return true;
+        }
+
+    }
+
+    public function updateChanelPhoto($chanel_id, $last_picname)
+    {
         $response = array();
         $thumb_path = '../uploads/chanel_thumb/';
         $prifle_pic = '../uploads/chanel_pics/';
@@ -320,16 +339,16 @@ user_id DESC
 
 
         if (!move_uploaded_file($_FILES['pic']['tmp_name'], $pic_path)) {
-         $response['error']  = true ;
-         $response['message'] = 'خطا در اپلود عکس ' ;
-         return $response ;
+            $response['error'] = true;
+            $response['message'] = 'خطا در اپلود عکس ';
+            return $response;
         } else {
             $last_insert = null;
             $this->conn->begin_transaction();
             $commit = true;
             try {
                 $stmt = $this->conn->prepare("update chanels set thumb = ? where chanel_id like ? ");
-                $stmt->bind_param("si", $pic_name_to_store,$chanel_id);
+                $stmt->bind_param("si", $pic_name_to_store, $chanel_id);
                 $stmt->execute();
                 $stmt->close();
 //                $last_insert = $this->conn->insert_id;
@@ -349,27 +368,27 @@ user_id DESC
 
             if ($commit) {
 
-                if ($last_picname!="n" && $last_picname!=null) {
+                if ($last_picname != "n" && $last_picname != null) {
                     try {
-                        unlink($thumb_path.$last_picname);
-                        unlink($prifle_pic.$last_picname);
-                    }catch (Exception $e) {
+                        unlink($thumb_path . $last_picname);
+                        unlink($prifle_pic . $last_picname);
+                    } catch (Exception $e) {
 
                     }
 
                 }
 
-                $response['error']  = false ;
-                $response['message'] = ' به روز رسانی انجام شد' ;
+                $response['error'] = false;
+                $response['message'] = ' به روز رسانی انجام شد';
                 $response['pic_name'] = $pic_name_to_store;
-                return $response ;
+                return $response;
 
 
             } else {
 
-                $response['error']  = true ;
-                $response['message'] = '  خطا در ساخت ستون جدید' ;
-                return $response ;
+                $response['error'] = true;
+                $response['message'] = '  خطا در ساخت ستون جدید';
+                return $response;
             }
 
 
@@ -377,7 +396,9 @@ user_id DESC
 
 
     }
-    public function addChanelPhoto($chanel_id) {
+
+    public function addChanelPhoto($chanel_id)
+    {
         $response = array();
 
         $prifle_pic = '../uploads/chanel_pics/';
@@ -386,48 +407,49 @@ user_id DESC
         $pic_path = $prifle_pic . $pic_name_to_store;
 
         if (!move_uploaded_file($_FILES['pic']['tmp_name'], $pic_path)) {
-            $response['error']  = true ;
-            $response['message'] = 'خطا در اپلود عکس ' ;
-            return $response ;
+            $response['error'] = true;
+            $response['message'] = 'خطا در اپلود عکس ';
+            return $response;
         } else {
 
-                $st = $this->conn->prepare("insert into   chanels_photos (chanel_id,photo) values (?,?)");
-                $st->bind_param("is",  $chanel_id , $pic_name_to_store);
-                $st->execute();
-                       $st->close();
-                if ($this->conn->affected_rows==0){
-                    $response['error']  = true ;
-                    $response['message'] = 'خطا در ساخت سطر جدید ' ;
-                    return $response ;
-                }else {
-                    $response['error']  = false ;
-                    $response['message'] = 'عکس جدید اضافه گردید' ;
-                    return $response ;
-                }
-
+            $st = $this->conn->prepare("insert into   chanels_photos (chanel_id,photo) values (?,?)");
+            $st->bind_param("is", $chanel_id, $pic_name_to_store);
+            $st->execute();
+            $st->close();
+            if ($this->conn->affected_rows == 0) {
+                $response['error'] = true;
+                $response['message'] = 'خطا در ساخت سطر جدید ';
+                return $response;
+            } else {
+                $response['error'] = false;
+                $response['message'] = 'عکس جدید اضافه گردید';
+                return $response;
+            }
 
 
         }
     }
-    public  function deleteChanelPhoto($photo_id , $photo_name) {
+
+    public function deleteChanelPhoto($photo_id, $photo_name)
+    {
 
         $prifle_pic = '../uploads/chanel_pics/';
         $response = array();
         $st = $this->conn->prepare("DELETE from chanels_photos where chanel_photo_id = ? ");
-        $st->bind_param("i",  $photo_id);
+        $st->bind_param("i", $photo_id);
         $st->execute();
         $st->close();
-        if ($this->conn->affected_rows==0){
-            $response['error']  = true ;
-            $response['message'] = 'خطا در حذف ' ;
+        if ($this->conn->affected_rows == 0) {
+            $response['error'] = true;
+            $response['message'] = 'خطا در حذف ';
             return $response;
-        }else {
-            $response['error']  = false ;
+        } else {
+            $response['error'] = false;
             $response['message'] = 'حذف عکس مورد نظر انجام شد';
-            if ($photo_name!="n" && $photo_name!=null) {
+            if ($photo_name != "n" && $photo_name != null) {
                 try {
-                    unlink($prifle_pic.$photo_name);
-                }catch (Exception $e) {
+                    unlink($prifle_pic . $photo_name);
+                } catch (Exception $e) {
 
                 }
 
@@ -437,18 +459,58 @@ user_id DESC
         }
     }
 
-    public function getAllChanelPhotoes($chanel_id) {
+    public function getAllChanelPhotoes($chanel_id)
+    {
         $response = array();
         $response['photos'] = array();
         $st = $this->conn->prepare("select chanel_photo_id,chanel_id,photo  from chanels_photos where chanel_id like ?");
-        $st->bind_param("i",  $chanel_id);
+        $st->bind_param("i", $chanel_id);
         $st->execute();
         $result = $st->get_result();
         while ($single = $result->fetch_assoc()) {
 
-            array_push($response['photos'] , $single);
+            array_push($response['photos'], $single);
         }
         $st->close();
+
+        return $response;
+
+    }
+
+
+    public function getAllCommentss($last_id, $chanel_id)
+    {
+         $response = array();
+         $response["comments"] = array();
+        if ($last_id == 0) {
+            $last_id=154812492;
+            $st = $this->conn->prepare("SELECT sub.message_id , sub.message ,sub.type , sub.chanel_id , sub.pic_thumb , sub.filename ,
+                                       sub.checked , COUNT(c.comment_id) as cm_count  
+                                       from (SELECT m.message_id ,m.chanel_id,  m.message,m.type,m.pic_thumb,m.filename,m.checked 
+                                       from message m where m.message_id < ? and  m.chanel_id = ?
+                                       ORDER by m.message_id DESC limit 0 , 20 ) sub
+                                       left OUTER join comment c on sub.message_id = c.message_id GROUP by sub.message_id  ORDER by sub.message_id  
+");
+        } else {
+            $st = $this->conn->prepare("SELECT sub.message_id , sub.message ,sub.type , sub.chanel_id , sub.pic_thumb , sub.filename ,
+                  sub.checked , COUNT(c.comment_id) as cm_count  
+                  from (SELECT m.message_id ,m.chanel_id,  m.message,m.type,m.pic_thumb,m.filename,m.checked 
+                  from message m where m.message_id < ? and  m.chanel_id = ? ORDER by m.message_id DESC limit 0 , 20 ) sub
+                  left OUTER join comment c on sub.message_id = c.message_id GROUP by sub.message_id  ORDER by sub.message_id  
+");
+        }
+
+        $st->bind_param("ii",$last_id,$chanel_id);
+        $st->execute();
+        $result = $st->get_result();
+
+
+
+        while ($single = $result->fetch_assoc()) {
+            array_push($response['comments'], $single);
+        }
+        $st->close();
+
 
         return $response;
 
@@ -595,7 +657,7 @@ user_id DESC
         }
 
 
-        if ($filetype == "image/jpeg" || $filetype == "image/jpg" ) {
+        if ($filetype == "image/jpeg" || $filetype == "image/jpg") {
             $imagecreate = "imagecreatefromjpeg";
             $imageformat = "imagejpeg";
         }
@@ -607,12 +669,11 @@ user_id DESC
         if ($filetype == "image/gif") {
             $imagecreate = "imagecreatefromgif";
             $imageformat = "imagegif";
+
         }
 
         $image_new = imagecreatetruecolor($new_width, $new_height);
-
         $uploadedfile = $_FILES['file']['tmp_name'];
-
         $image = $imagecreate($uploadedfile);
         // vase inke age png bood back groundesh siah nashe
         if ($extension == "gif" or $extension == "png") {
@@ -697,7 +758,7 @@ user_id DESC
         $thumb_path_toStore = $video_thumb_path . $thumb_name_to_store;
 
         if (move_uploaded_file($_FILES['thumb']['tmp_name'], $thumb_path_toStore)) {
-            $lenth = filesize($_FILES['file']['tmp_name']) ;
+            $lenth = filesize($_FILES['file']['tmp_name']);
             if (move_uploaded_file($_FILES['file']['tmp_name'], $video_path_toStore)) {
                 $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type , pic_thumb    , lenth  , time, url  ) values (?,?,?,? , ? , ?,?,?)");
                 $stmt->bind_param("iisissss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $thumb_name_to_store, $lenth, $content['time'], $video_name_to_store);
@@ -712,8 +773,8 @@ user_id DESC
                     $stmt->execute();
                     $result = $stmt->get_result();
 
-                    $object=(object) [
-                        "error" => 0 ,
+                    $object = (object)[
+                        "error" => 0,
                         "content" => $result
 
                     ];
@@ -721,7 +782,7 @@ user_id DESC
 
                 }
             } else {
-                $object=(object) [
+                $object = (object)[
                     "error" => 2
 
                 ];
@@ -729,8 +790,8 @@ user_id DESC
             }
 
 
-        }else {
-            $object=(object) [
+        } else {
+            $object = (object)[
                 "error" => 1
 
             ];
@@ -738,7 +799,7 @@ user_id DESC
         }
     }
 
-    public function makeAudioMessage($content , $chanel_id)
+    public function makeAudioMessage($content, $chanel_id)
     {
         $audio_path = '../uploads/audio/';
         $audio_info = pathinfo($_FILES['file']['name']);
@@ -750,7 +811,7 @@ user_id DESC
         if (move_uploaded_file($_FILES['file']['tmp_name'], $audio_path_toStore)) {
             $lenth = $_FILES['file']['size'];
             $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type  , lenth  , time,filename, url  ) values (?,?,?,? ,?,?,?,?)");
-            $stmt->bind_param("iisissss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['time'],$content['filename'] ,  $audio_name_to_store);
+            $stmt->bind_param("iisissss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['time'], $content['filename'], $audio_name_to_store);
             $stmt->execute();
 //
             if ($this->conn->affected_rows > 0) {
@@ -769,16 +830,16 @@ user_id DESC
                 ];
                 return $object;
 
-            }else {
-                            $object = (object)[
-                "error" => 2
+            } else {
+                $object = (object)[
+                    "error" => 2
 
-            ];
-           return $object;
+                ];
+                return $object;
             }
 
-        }else {
-            $object=(object) [
+        } else {
+            $object = (object)[
                 "error" => 1
 
             ];
@@ -787,10 +848,9 @@ user_id DESC
         }
 
 
-
     }
 
-    public function makeFileMessage($content , $chanel_id)
+    public function makeFileMessage($content, $chanel_id)
     {
         $file_path = '../uploads/files/';
         $file_info = pathinfo($_FILES['file']['name']);
@@ -800,12 +860,11 @@ user_id DESC
         $file_path_toStore = $file_path . $file_name_to_store;
 
 
-
         if (move_uploaded_file($_FILES['file']['tmp_name'], $file_path_toStore)) {
             $lenth = $_FILES['file']['size'];
-         //   $lenth = round($_FILES['file']['size'] / 1024);
+            //   $lenth = round($_FILES['file']['size'] / 1024);
             $stmt = $this->conn->prepare("INSERT INTO message (admin_id , chanel_id , message,type  , lenth  ,filename, url  ) values (?,?,?,? ,?,?,?)");
-            $stmt->bind_param("iisisss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['filename'] ,  $file_name_to_store);
+            $stmt->bind_param("iisisss", $content['admin_id'], $chanel_id, $content['message'], $content['type'], $lenth, $content['filename'], $file_name_to_store);
             $stmt->execute();
 //
             if ($this->conn->affected_rows > 0) {
@@ -824,7 +883,7 @@ user_id DESC
                 ];
                 return $object;
 
-            }else {
+            } else {
                 $object = (object)[
                     "error" => 2
 
@@ -832,15 +891,14 @@ user_id DESC
                 return $object;
             }
 
-        }else {
-            $object=(object) [
+        } else {
+            $object = (object)[
                 "error" => 1
 
             ];
             return $object;
 
         }
-
 
 
     }

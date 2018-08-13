@@ -48,6 +48,8 @@ $app->get("/chanels/:chanel_id/getMessages" , 'authenticate' , function ($chanel
 
 });
 
+
+
 $app->get("/chanels/:chanel_id/getMessagesTop" , 'authenticate' , function ($chanel_id) use ($app) {
     $response= array();
     global $user_id;
