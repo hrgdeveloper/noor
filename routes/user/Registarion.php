@@ -17,7 +17,7 @@ $app->post("/register" , function () use ($app) {
 
 
         if ($result==1 || $result==2) {
-         //   sendSms($mobile,$otp);
+        //    sendSms($mobile,$otp);
             $response['error'] = false ;
             $response['message'] = "پیامک حاوی کد فعال سازی برای شما ارسال گردید";
 

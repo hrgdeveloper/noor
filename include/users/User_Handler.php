@@ -49,8 +49,7 @@ class User_Handler
         }
 
     }
-
-      public function getUserIdByMObile($mobile) {
+    public function getUserIdByMObile($mobile) {
         $stmt = $this->conn->prepare("select user_id from users where mobile like ? ");
         $stmt->bind_param("s",$mobile);
         $stmt->execute();
@@ -60,7 +59,6 @@ class User_Handler
         $stmt->close();
         return $user_id;
       }
-
     public function create_sms_code($user_id, $otp, $mobile )
     {
 
@@ -77,7 +75,6 @@ class User_Handler
 
 
     }
-
     public function activeUser($mobile, $otp)
     {
        $response =array();
@@ -91,8 +88,7 @@ class User_Handler
             $num_rows = $st->num_rows;
             if ($num_rows > 0) {
                 $st->fetch();
-                if ($active==1) {
-
+                if ($active > 0) {
 
                     $stnew = $this->conn->prepare("SELECT  p.pic , p.pic_thumb from users u LEFT join user_profile p on u.user_id = p.user_id WHERE u.user_id like ?");
                     $stnew->bind_param("i", $user_id);
@@ -111,9 +107,10 @@ class User_Handler
                     $user["user_id"] = $user_id;
                     $user["mobile"] = $mobile;
                     $user["apikey"] = $apikey;
+                    $user["active"] = $active;
                     $user["username"] = $username;
-                   $user["pic"] = $result['pic'] ;
-                   $user["pic_thumb"] = $result['pic_thumb'];
+                    $user["pic"] = $result['pic'] ;
+                    $user["pic_thumb"] = $result['pic_thumb'];
                     $user["created_at"] = $created_at;
 
                     $response['error'] = false ;
@@ -145,8 +142,6 @@ class User_Handler
 
 
     }
-
-
     public function updateUserSmsSate($user_id)
     {
         $st = $this->conn->prepare("update users set status = 1 where user_id = ?");
@@ -156,8 +151,6 @@ class User_Handler
         $st->bind_param("i", $user_id);
         $st->execute();
     }
-
-
     public function isnotuserExists($mobile)
     {
         $st = $this->conn->prepare("select user_id from users where mobile like ? ;");
@@ -170,7 +163,6 @@ class User_Handler
 
         return $num_rows == 0;
     }
-
     public function updateFcmCode($user_id , $fcm_code) {
         $response = array();
         $stmt = $this->conn->prepare("UPDATE users SET fcm_code = ? WHERE user_id = ?");
@@ -191,7 +183,6 @@ class User_Handler
         $stmt->close();
         return $response;
 }
-
     public function updateUsername($user_id , $username) {
         $response = array();
 
@@ -224,7 +215,6 @@ class User_Handler
 
 
     }
-
     public function isUsernameExists($usernamme) {
         $st = $this->conn->prepare("select user_id from users where username like ? ;");
         $st->bind_param("s", $usernamme);
@@ -234,7 +224,6 @@ class User_Handler
         $st->close();
         return $num_rows > 0;
     }
-
     public function updateProfilePic($user_id ,$last_picname) {
         $response=array();
         $new_width = "250";
@@ -352,10 +341,6 @@ class User_Handler
             return $response;
         }
     }
-
-
-
-
     private function generateApiKey()
     {
         return md5(uniqid(rand(), true));
@@ -367,11 +352,11 @@ class User_Handler
         $response = array();
         $response['chanels'] = array();
         // in query baes mishe ke akharin payam vared shode vase har canalam begirim
-        $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username, ms1.message as last_message,ms1.type , ms1.updated_at
-FROM chanels AS c join admin_login a on c.admin_id = a.admin_id
-left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) order by c.chanel_id ");
+        $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username, ms1.message as last_message,ms1.type ,
+                                     ms1.updated_at FROM chanels AS c left JOIN message AS ms1 ON ms1.message_id = 
+                                    (SELECT message_id FROM message WHERE chanel_id = c.chanel_id and active = 1 ORDER BY message_id DESC LIMIT 1)
+                                    left join admin_login a on ms1.admin_id = a.admin_id order by c.chanel_id ");
         $stmt->execute();
-
         $result = $stmt->get_result();
         if ($result->num_rows>0) {
             $stmt_tead = $this->conn->prepare("SELECT c.chanel_id ,COUNT(m.message_id) as count FROM chanels c left join message m on c.chanel_id = m.chanel_id AND m.active = 1 GROUP BY c.chanel_id
@@ -424,6 +409,29 @@ order by c.chanel_id
         return $response;
 
     }
+    public function getDeletedCount() {
+        $response=array();
+        $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM message where active = 0 ") ;
+        $stmt->execute();
+        $stmt->bind_result($count);
+        $stmt->store_result();
+        $stmt->fetch();
+        $stmt->close();
+        $response['error'] = false;
+        $response['count'] = $count;
+        return $response;
+    }
+    public function getDeletedList() {
+        $response=array();
+        $response["message_ids"]  = array();
+        $stmt = $this->conn->prepare("SELECT message_id  FROM message where active = 0 ") ;
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($single = $result->fetch_assoc()) {
+            array_push($response["message_ids"] , $single);
+        }
+        return $response;
+    }
     public function getUserCount() {
         $response = array();
         $stmt_tead = $this->conn->prepare("SELECT count(user_id) as count  from users where users.status=1 and users.active=1 ");
@@ -463,14 +471,14 @@ public function getAllMessages($chanel_id ,$message_id,$user_id)
 
         if ($message_id==0) {
             $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
- sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename, sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+ sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename,sub.active , sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
  (select * from message where chanel_id like ? and active like 1 and message_id > ? ORDER by message_id DESC limit $start, $limit) sub 
  left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");
         }else {
             $limit=12412415124313;
             $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
-             sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+             sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename, sub.active , sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
             (select * from message where chanel_id like ? and active like 1 and message_id > ? ORDER by message_id DESC limit $start, $limit) sub 
             left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");
@@ -507,15 +515,13 @@ public function getAllMessages($chanel_id ,$message_id,$user_id)
     }
 
 }
-
-
-    public function getAllTopMessages($chanel_id ,$top_id,$user_id)
+public function getAllTopMessages($chanel_id ,$top_id,$user_id)
     {
         $start=0;
         $limit = 20;
 
                 $stmt = $this->conn->prepare("select sub.message_id , sub.admin_id, sub.chanel_id ,
- sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
+ sub.message , sub.type,sub.pic_thumb,sub.lenth,sub.time,sub.filename,sub.active,sub.url,sub.updated_at , IFNULL(l.message_id,0) as liked from 
  (select * from message where chanel_id like ? and active like 1 and message_id < ? ORDER by message_id DESC limit $start, $limit) sub 
  left join likes l on l.message_id = sub.message_id and l.user_id like ?  order by sub.message_id ASC
  		");
@@ -544,7 +550,6 @@ public function getAllMessages($chanel_id ,$message_id,$user_id)
 
 
     }
-
 public function getLastCounts($chanel_id,$message_id) {
 
     $total = mysqli_num_rows(mysqli_query($this->conn, "SELECT message_id from message where active = 1 and 
@@ -552,8 +557,6 @@ public function getLastCounts($chanel_id,$message_id) {
 
     return $total;
 }
-
-
 public function setLike($type ,$user_id , $message_id) {
         $response = array();
         if ($type==1) {
@@ -589,7 +592,6 @@ public function setLike($type ,$user_id , $message_id) {
             return $response;
         }
 }
-
 public function makeComment($chanel_id , $text ,$user_id ,$message_id ) {
         $response=array();
          if ($this->isUsernameCompelete($user_id)==0) {
@@ -625,7 +627,6 @@ public function makeComment($chanel_id , $text ,$user_id ,$message_id ) {
 
 
 }
-
 public function  getAllComments($message_id) {
         $response=array();
 
@@ -665,7 +666,6 @@ public function  getAllComments($message_id) {
            return $response;
        }
 }
-
 public function isUsernameCompelete($user_id){
     $stmt = $this->conn->prepare("select username  from users where user_id like ?");
     $stmt->bind_param("i", $user_id);

@@ -67,6 +67,31 @@ function authenticateAdmin(\Slim\Route $route) {
         $app->stop();
     }
 }
+function authenticateInside(\Slim\Route $route){
+    $header = apache_request_headers();
+    $response  = array();
+    $app = \Slim\Slim::getInstance();
+    if (isset($header['AuthorizationInside'])) {
+        $db = new DbHanlder();
+        global $apikey;
+        $apikey = $header['AuthorizationInside'] ;
+        if (!$db->isValidApikeyAdminInside($apikey)) {
+            $response['error'] = true ;
+            $response['message'] = "Apikey is not valid ! ";
+            echoResponse(401,$response);
+            $app->stop();
+        }else {
+            global $user_id ;
+            $user_id = $db->getUserIdByApikey($apikey);
+        }
+
+    }else {
+        $response['error'] = true ;
+        $response['message'] = "Apikey is Missing! ";
+        echoResponse(400,$response);
+        $app->stop();
+    }
+}
 
 
 require '../routes/user/Registarion.php';
@@ -75,8 +100,10 @@ require '../routes/admin/Registeration.php';
 require '../routes/admin/AdminOprations.php';
 
 
+
+
 function sendSms($mobile ,$otp) {
-    $message = "به نور الصالحین خوش آمدید رمز عبور شما :" . $otp ;
+    $message = "به نور صالحین خوش آمدید رمز عبور شما :" . $otp ;
     $query=http_build_query(array('receptor' => $mobile , 'message' => $message), null, "&", PHP_QUERY_RFC3986);
      CallAPI("get",'v1/71576641695278595A756D65534F324A6C486E414F334F6A7A2F696753717A6D/sms/send.json?'.$query ,array(),array());
 
@@ -138,7 +165,11 @@ function CallAPI($method, $api, $data, $headers) {
             curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
             break;
     }
+
+
     $response = curl_exec($curl);
+
+
 
 
     /* Check for 404 (file not found). */
@@ -170,7 +201,24 @@ function CallAPI($method, $api, $data, $headers) {
 //    die;
 }
 
+$app->get('/test' , function () {
+  $url =   'https://api.telegram.org/bot581176397:AAFRm8X862bv8q0fZrD1ZO3du1FtpvnRRwc/getChatMembersCount?chat_id=@kafiha' ;
+   //$url =   'https://www.aparat.com/etc/api/profile/username/irancell' ;
+    $curl = curl_init($url);
+    $proxy = '127.0.0.1:8580';
 
+
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_PROXY, $proxy);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array());
+    curl_setopt($curl,CURLOPT_POST, true);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, array());
+    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "GET");
+    $response = curl_exec($curl);
+    $real_responnse  = json_decode($response);
+    var_dump($real_responnse);
+
+});
 function verifyRequiredParams($required_fields) {
     $error = false;
     $error_fields = "";

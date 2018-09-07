@@ -158,7 +158,6 @@ user_id DESC
     {
 
 
-
         if ($this->chanelExists($details['name'])) {
 
             $oject = (object)[
@@ -247,10 +246,10 @@ user_id DESC
                 if ($commit) {
 
 
-                    $stmt_last = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username, ms1.message as last_message,ms1.type , ms1.updated_at
-                          FROM chanels AS c join admin_login a on c.admin_id = a.admin_id
-                          left JOIN message AS ms1 ON ms1.message_id = (SELECT message_id FROM message
-                          WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1) where c.chanel_id like ? ");
+                    $stmt_last = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username, ms1.message as last_message,ms1.type ,
+                                     ms1.updated_at FROM chanels AS c left JOIN message AS ms1 ON ms1.message_id =
+                        (SELECT message_id FROM message WHERE chanel_id = c.chanel_id and active = 1 ORDER BY message_id DESC LIMIT 1)
+                                    left join admin_login a on ms1.admin_id = a.admin_id where c.chanel_id = ? ");
                     $stmt_last->bind_param("i", $last_insert);
                     $stmt_last->execute();
                     $chanel = $stmt_last->get_result();
@@ -476,8 +475,6 @@ user_id DESC
         return $response;
 
     }
-
-
     public function getAllCommentss($last_id, $chanel_id)
     {
          $response = array();
@@ -515,8 +512,6 @@ user_id DESC
         return $response;
 
     }
-
-
     private function chanelExists($name)
     {
         $stmt = $this->conn->prepare("select chanel_id from chanels where name like ?");
@@ -528,16 +523,16 @@ user_id DESC
         return $result->num_rows > 0;
 
     }
-
     public function getAllChenls()
     {
         $response = array();
         $response['chanels'] = array();
         // in query baes mishe ke akharin payam vared shode vase har canalam begirim
-        $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username,ms1.updated_at, ms1.message as last_message,ms1.type ,
- COUNT(co.comment_id) as cm_count FROM chanels AS c join admin_login a on c.admin_id = a.admin_id left JOIN message AS ms1 ON ms1.message_id = 
- (SELECT message_id FROM message WHERE chanel_id = c.chanel_id ORDER BY message_id DESC LIMIT 1)
-  left join comment co on c.chanel_id=co.chanel_id GROUP BY c.chanel_id ");
+        $stmt = $this->conn->prepare("SELECT c.chanel_id, c.name,c.description,c.thumb, a.username,ms1.updated_at, ms1.message as last_message,ms1.type , COUNT(co.comment_id) as cm_count FROM
+                         chanels AS c left JOIN message AS ms1 ON ms1.message_id = 
+                         (SELECT message_id FROM message WHERE chanel_id = c.chanel_id and active = 1 ORDER BY message_id DESC LIMIT 1)
+                          left join admin_login a on ms1.admin_id = a.admin_id left join comment co on c.chanel_id=co.chanel_id GROUP BY c.chanel_id ");
+
 
         $stmt->execute();
 
@@ -556,7 +551,6 @@ user_id DESC
         return $response;
 
     }
-
     public function getAllComments($chanel_id)
     {
         $response = array();
@@ -591,7 +585,6 @@ user_id DESC
             return $response;
         }
     }
-
     public function updateCommentState($comment_id, $state)
     {
         $stmt = $this->conn->prepare("update comment set visible = ? WHERE comment_id = ?");
@@ -640,7 +633,6 @@ user_id DESC
         $message_thumb_path = '../uploads/message/pic_thumb/';
         $pic_info = pathinfo($_FILES['file']['name']);
         $extension = $pic_info['extension'];
-
         $pic_name_to_store = rand(1111, 9999) . '_' . substr(abs(crc32(uniqid())), 0, 6) . '.' . $extension;
         $pic_path = $message_pic_path . $pic_name_to_store;
         $thumb_path = $message_thumb_path . $pic_name_to_store;
@@ -902,4 +894,73 @@ user_id DESC
 
 
     }
+
+    public function deleteMessage($message_id , $file_name , $type) {
+
+        $response= array();
+
+        $file_path = null ;
+        $thumb_path = null ;
+        $video_thumb_name = null ;
+
+        if ($type==2){
+            $file_path= '../uploads/message/pic/' ;
+            $thumb_path = '../uploads/message/pic_thumb/';
+        }else if ($type==3) {
+
+            $video_thumb_name = strtok($file_name, '.') .".jpg";
+            $file_path= '../uploads/videos/video/';
+            $thumb_path = '../uploads/videos/thumb/';
+
+        } else if($type==4) {
+            $file_path = '../uploads/audio/';
+        }else if ($type==5) {
+            $file_path ='../uploads/files/';
+
+        }
+
+        $st =$this->conn->prepare("update message set active = 0  where message_id = ? ;");
+        $st->bind_param("i", $message_id);
+        $st->execute();
+        if ($this->conn->affected_rows>0) {
+            $response['error'] = false ;
+            $response['status'] = 201;
+            $response['message'] = 'حذف با موفقیت انجام گردید';
+            if ($type > 1) {
+                if ($type==2) {
+                    try {
+                        unlink($file_path . $file_name);
+                        unlink($thumb_path . $file_name);
+                    } catch (Exception $e) {
+
+                    }
+                }else if ($type==3) {
+                    try {
+                        unlink($file_path . $file_name);
+                        unlink($thumb_path . $video_thumb_name);
+                    } catch (Exception $e) {
+
+                    }
+
+                } else {
+                    try {
+                        unlink($file_path . $file_name);
+                    } catch (Exception $e) {
+
+                    }
+                }
+
+            }
+            return $response;
+        }else {
+            $response['error'] = true ;
+            $response['status'] = 501;
+            $response['message'] = 'خطا در حذف . لطفا دوباره تلاش کنید';
+            return $response;
+        }
+
+
+    }
+
+
 }

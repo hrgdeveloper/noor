@@ -217,7 +217,6 @@ $app->put("/updateChanel/:chanel_id", "authenticateAdmin" , function ($chanel_id
     echoResponse(201,$response);
 
 });
-
 $app->get("/getAllChanels" , 'authenticateAdmin' ,  function () {
     $db=new Admin_Hanlder();
     $response=$db->getAllChenls();
@@ -245,8 +244,6 @@ $app->put("/setCommentState/:comment_id" , 'authenticateAdmin' ,  function ($com
     echoResponse(200,$response);
 
 });
-
-
 $app->post("/updateChanelPic/:chanel_id" , 'authenticateAdmin' , function ($chanel_d) use ($app) {
 
     define ("MAX_SIZE","2000");
@@ -358,7 +355,6 @@ $app->get("/getAllChanelsPhotos/:chanel_id"  , function ($chanel_id) {
     $response = $db->getAllChanelPhotoes($chanel_id);
     echoResponse(201,$response);
 });
-
 $app->get("/getComments/:chanel_id" , 'authenticateAdmin' , function ($chanel_id) use ($app) {
     $last_id=  $app->request->get("last_id");
     $db = new Admin_Hanlder();
@@ -376,8 +372,6 @@ $app->post(
 
     $jsonContent = $app->request->post("content");
     $content = json_decode($jsonContent,true);
-
-
 
     $db = new Admin_Hanlder();
     $type =  $content['type'];
@@ -629,6 +623,16 @@ $app->post(
             echoResponse(200, $response);
         }
     }
+
+});
+
+$app->put("/deleteMessage/:message_id" , "authenticateInside" , function ($message_id) use ($app) {
+    $file_name = $app->request->post("file_name");
+    $type = $app->request->post("type");
+    $db = new Admin_Hanlder();
+    $response = $db->deleteMessage($message_id,$file_name ,$type);
+    echoResponse($response['status'] , $response);
+
 
 });
 

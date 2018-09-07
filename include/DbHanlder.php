@@ -19,8 +19,7 @@ class DbHanlder {
 
 
     public function isValidApikey($apikey) {
-   $stmt = $this->conn->prepare("select user_id from users where apikey like ? and active = 1 ");
-
+   $stmt = $this->conn->prepare("select user_id from users where apikey like ? and active > 0 ");
    $stmt->bind_param("s" , $apikey);
    $stmt->execute();
    $result =   $stmt->get_result();
@@ -34,6 +33,16 @@ class DbHanlder {
         $stmt->bind_param("s" , $apikey);
         $stmt->execute();
         $result =   $stmt->get_result();
+        return $result->num_rows > 0 ;
+
+    }
+
+    public function isValidApikeyAdminInside($apikey) {
+        $stmt = $this->conn->prepare("select user_id from users where apikey like ? and active = 2 ");
+        $stmt->bind_param("s" , $apikey);
+        $stmt->execute();
+        $result =   $stmt->get_result();
+        $stmt->close();
         return $result->num_rows > 0 ;
 
     }

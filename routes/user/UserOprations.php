@@ -11,12 +11,27 @@ $app->get("/getUnRead" , 'authenticate' ,  function () {
     echoResponse(200,$response);
 
 });
-$app->get("/getUserCount" , function() {
 
+$app->get("/getDeletedCount" , function () {
+    $db=new User_Handler();
+    $response=$db->getDeletedCount();
+    echoResponse(200,$response);
+});
+
+$app->get("/getDeletedList" , function () {
+    $db=new User_Handler();
+    $response=$db->getDeletedList();
+    echoResponse(200,$response);
+});
+
+
+
+$app->get("/getUserCount" , function() {
    $db= new User_Handler();
    $response = $db->getUserCount();
    echoResponse(200,$response);
 });
+
 $app->get("/chanels/:chanel_id/getMessages" , 'authenticate' , function ($chanel_id) use ($app) {
     $response= array();
     global $user_id;
@@ -45,10 +60,7 @@ $app->get("/chanels/:chanel_id/getMessages" , 'authenticate' , function ($chanel
 
     }
     echoResponse(201,$response);
-
 });
-
-
 
 $app->get("/chanels/:chanel_id/getMessagesTop" , 'authenticate' , function ($chanel_id) use ($app) {
     $response= array();
